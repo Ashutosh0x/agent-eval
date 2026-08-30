@@ -50,6 +50,21 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * The mobile menu's entrance. Defined here rather than inline so the global
+ * reduced-motion rule below collapses it along with everything else.
+ */
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Numbers that sit in columns must align. */
 .tabular {
   font-variant-numeric: tabular-nums;

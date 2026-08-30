@@ -3,7 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>agent-eval</title>
+
+    <!--
+      Defaults for a crawler or a link unfurler, which read the served document
+      and never run the router. The landing page replaces these on mount and
+      restores them on unmount, so an authenticated user's audit log does not
+      sit under a marketing headline.
+
+      There is no og:image. Pointing at one that does not exist produces a
+      broken preview card, which is worse than a text-only unfurl.
+    -->
+    <title>agent-eval — Evaluate AI agents. Prove what happened.</title>
+    <meta
+      name="description"
+      content="Self-hosted infrastructure for evaluating AI agents with hash-chained audit trails, signed evidence bundles that verify offline, and reproducible run manifests."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="agent-eval" />
+    <meta property="og:title" content="agent-eval — Evaluate AI agents. Prove what happened." />
+    <meta
+      property="og:description"
+      content="Self-hosted infrastructure for evaluating AI agents with hash-chained audit trails, signed evidence bundles that verify offline, and reproducible run manifests."
+    />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="agent-eval — Evaluate AI agents. Prove what happened." />
+    <meta
+      name="twitter:description"
+      content="Self-hosted infrastructure for evaluating AI agents with hash-chained audit trails, signed evidence bundles that verify offline, and reproducible run manifests."
+    />
+    <meta name="color-scheme" content="light dark" />
   </head>
   <body>
     <div id="root"></div>

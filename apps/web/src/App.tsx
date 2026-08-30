@@ -1,8 +1,20 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import {
+  BrowserRouter,
+  Link,
+  NavLink,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 import { BookOpen, FileBadge, Moon, PlayCircle, ScrollText, Sun } from 'lucide-react';
 import { ProfileMenu } from './components/ProfileMenu';
+import { LandingFooter } from './components/landing/ClosingSections';
+import { LandingNav } from './components/landing/LandingNav';
 import { DocsPage } from './pages/Docs';
+import { LandingPage } from './pages/Landing';
 import { EvidenceBundleView } from './pages/EvidenceBundle';
 import { ProfilePage } from './pages/Profile';
 import { AuditLog, Runs } from './pages/RunsAndAudit';
@@ -15,28 +27,75 @@ import { applyTheme, readTheme, resolveTheme, writeTheme, type ThemeChoice } fro
 export default function App() {
   const [token, setTokenState] = useState(getToken());
 
-  if (!token) {
-    return (
-      <TokenGate
-        onSubmit={(t) => {
+  return (
+    <BrowserRouter>
+      <Routed
+        token={token}
+        onToken={(t) => {
           setToken(t);
           setTokenState(t);
         }}
+        onSignOut={() => {
+          clearToken();
+          setTokenState('');
+        }}
       />
+    </BrowserRouter>
+  );
+}
+
+/**
+ * Chooses between the public site and the application.
+ *
+ * This branches on useLocation rather than nesting the dashboard under a
+ * parent <Route>, and that is deliberate. Shell renders its own <Routes> with
+ * absolute paths ("/runs", "/settings/*"); nesting it beneath a splat route
+ * would change what those paths are matched against and quietly break every
+ * one of them. Branching first leaves Shell's routing exactly as it was.
+ */
+function Routed({
+  token,
+  onToken,
+  onSignOut,
+}: {
+  token: string;
+  onToken: (t: string) => void;
+  onSignOut: () => void;
+}) {
+  const { pathname } = useLocation();
+
+  // Public: the marketing page. An authenticated visitor still sees it, with
+  // the navigation offering the dashboard instead of sign-in.
+  if (pathname === '/') return <LandingPage authenticated={!!token} />;
+
+  if (pathname === '/signin') {
+    return token ? <Navigate to="/runs" replace /> : <TokenGate onSubmit={onToken} />;
+  }
+
+  // Documentation is public. It is static content that makes no API call, and
+  // the landing navigation links to it — sending a first-time reader to a
+  // token prompt to find out what the product is would be backwards.
+  if (!token && pathname.startsWith('/docs')) {
+    return (
+      <div className="scroll-smooth motion-reduce:scroll-auto">
+        <LandingNav authenticated={false} />
+        <main className="mx-auto max-w-6xl px-6 py-10">
+          <Routes>
+            <Route path="/docs" element={<DocsPage />} />
+            <Route path="/docs/:sectionId" element={<DocsPage />} />
+          </Routes>
+        </main>
+        <LandingFooter />
+      </div>
     );
   }
 
+  if (!token) return <Navigate to="/signin" replace />;
+
   return (
-    <BrowserRouter>
-      <IdentityProvider>
-        <Shell
-          onSignOut={() => {
-            clearToken();
-            setTokenState('');
-          }}
-        />
-      </IdentityProvider>
-    </BrowserRouter>
+    <IdentityProvider>
+      <Shell onSignOut={onSignOut} />
+    </IdentityProvider>
   );
 }
 
@@ -192,7 +251,12 @@ function TokenGate({ onSubmit }: { onSubmit: (t: string) => void }) {
         }}
         className="w-full max-w-xl space-y-4 rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-8"
       >
-        <h1 className="font-serif text-xl">agent-eval</h1>
+        <div className="flex items-baseline justify-between gap-4">
+          <h1 className="font-serif text-xl">agent-eval</h1>
+          <Link to="/" className="text-xs text-[var(--text-muted)] hover:text-[var(--text)]">
+            Back to home
+          </Link>
+        </div>
         <p className="text-sm text-[var(--text-muted)]">
           Paste an access token. In development the format is{' '}
           <span className="font-mono text-xs">&lt;tenant&gt;:&lt;actor&gt;:&lt;scopes&gt;</span> —
