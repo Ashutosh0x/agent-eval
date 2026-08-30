@@ -61,7 +61,16 @@ export const startRunSchema = z.object({
   // Explicitly nullable rather than optional: "this run was not seeded" is a
   // fact worth recording, and an absent field cannot say it.
   seed: z.number().int().nullable(),
-  isolationBackend: z.enum(['firecracker', 'cloud-hypervisor', 'gvisor', 'kata', 'trusted-dev']),
+  isolationBackend: z.enum([
+    'firecracker',
+    'cloud-hypervisor',
+    'gvisor',
+    'kata',
+    'trusted-dev',
+    'local-process',
+    // Calls a model provider rather than running code in a sandbox.
+    'model',
+  ]),
   toolchain: z
     .record(z.string())
     .refine((t) => Object.keys(t).length > 0, {

@@ -56,21 +56,46 @@ export interface AuditStore {
   verify(): Promise<{ valid: boolean; brokenAt?: number; reason?: string }>;
 }
 
+export type RunStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+
 export interface RunRecord {
   id: string;
   tenantId: string;
-  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status: RunStatus;
   manifest: Record<string, unknown>;
   retentionRules: string[];
   createdAt: Date;
+  startedAt?: Date;
   completedAt?: Date;
+  /** Which worker holds this run. Set by claim, cleared on terminal status. */
+  claimedBy?: string;
+  claimedAt?: Date;
+  /** Populated on failure. A run that failed must be able to say why. */
+  failureReason?: string;
 }
 
 export interface RunStore {
   create(ctx: TenantContext, run: Omit<RunRecord, 'tenantId'>): Promise<RunRecord>;
   get(ctx: TenantContext, id: string): Promise<RunRecord | null>;
   list(ctx: TenantContext, q: { cursor?: string; limit: number }): Promise<Page<RunRecord>>;
-  setStatus(ctx: TenantContext, id: string, status: RunRecord['status']): Promise<RunRecord | null>;
+  setStatus(ctx: TenantContext, id: string, status: RunStatus): Promise<RunRecord | null>;
+  /**
+   * Atomically move one queued run to running and stamp the claimant.
+   *
+   * Cross-tenant by design: a worker serves the whole deployment, not one
+   * tenant. The atomicity is what stops two workers executing the same run --
+   * in Postgres this becomes
+   *
+   *   UPDATE runs SET status='running', claimed_by=$1
+   *   WHERE id = (SELECT id FROM runs WHERE status='queued'
+   *               ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1)
+   *   RETURNING *
+   *
+   * Single-statement, so the race cannot be lost between read and write.
+   */
+  claimNext(workerId: string): Promise<RunRecord | null>;
+  /** Record a terminal outcome. `reason` is required for a failure. */
+  finish(id: string, status: 'completed' | 'failed', reason?: string): Promise<RunRecord | null>;
 }
 
 export interface ApprovalRecord {
@@ -211,12 +236,56 @@ export class InMemoryRunStore implements RunStore {
     return paginate(items, q.cursor, q.limit);
   }
 
-  async setStatus(ctx: TenantContext, id: string, status: RunRecord['status']) {
+  async setStatus(ctx: TenantContext, id: string, status: RunStatus) {
     const r = await this.get(ctx, id);
     if (!r) return null;
     const updated = { ...r, status, ...(status === 'completed' ? { completedAt: new Date() } : {}) };
     this.runs.set(id, updated);
     return updated;
+  }
+
+  async claimNext(workerId: string): Promise<RunRecord | null> {
+    // Node runs this to completion without interleaving, which gives the same
+    // guarantee the SQL above does: no two callers can observe the same
+    // queued run before one of them has written 'running'.
+    const queued = [...this.runs.values()]
+      .filter((r) => r.status === 'queued')
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+    const next = queued[0];
+    if (!next) return null;
+
+    const claimed: RunRecord = {
+      ...next,
+      status: 'running',
+      claimedBy: workerId,
+      claimedAt: new Date(),
+      startedAt: new Date(),
+    };
+    this.runs.set(claimed.id, claimed);
+    return claimed;
+  }
+
+  async finish(
+    id: string,
+    status: 'completed' | 'failed',
+    reason?: string,
+  ): Promise<RunRecord | null> {
+    const r = this.runs.get(id);
+    if (!r) return null;
+    const updated: RunRecord = {
+      ...r,
+      status,
+      completedAt: new Date(),
+      ...(reason ? { failureReason: reason } : {}),
+    };
+    this.runs.set(id, updated);
+    return updated;
+  }
+
+  /** For the worker, which has no tenant context of its own. */
+  async getById(id: string): Promise<RunRecord | null> {
+    return this.runs.get(id) ?? null;
   }
 }
 

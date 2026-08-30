@@ -36,6 +36,7 @@ import {
 } from '../schemas/index.js';
 import type { InMemoryAuditStore, Stores, TenantContext } from '../store/index.js';
 import { registerDocs } from './docs.js';
+import type { RunWorker } from '../worker/worker.js';
 import {
   ALL_SCOPES,
   ApiKeyError,
@@ -56,6 +57,10 @@ export interface AppOptions {
   docs?: boolean;
   /** Where API keys live. Defaults to an in-memory store. */
   apiKeys?: ApiKeyStore;
+  /** The run worker, if one is attached. Reported by /v1/ready. */
+  worker?: RunWorker;
+  /** Why execution is unavailable, when it is. */
+  executionUnavailable?: string | null;
 }
 
 /**
@@ -127,7 +132,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
    * Auth. The public-key route is exempt on purpose: an auditor must be able
    * to verify a signature without an account on the system that produced it.
    */
-  const PUBLIC_ROUTES = new Set(['/v1', '/v1/evidence/keys', '/v1/health']);
+  const PUBLIC_ROUTES = new Set(['/v1', '/v1/evidence/keys', '/v1/health', '/v1/ready']);
 
   /**
    * Prefixes served without a bearer token.
@@ -178,6 +183,44 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   // ------------------------------------------------------------------ health
 
   app.get('/v1/health', async () => ({ status: 'ok' }));
+
+  /**
+   * Readiness, which is a different question from liveness.
+   *
+   * /v1/health says the process is up. This says whether the deployment can
+   * actually execute an evaluation — a control plane that accepts runs nobody
+   * will ever claim is worse than one that refuses them, because the run sits
+   * in `queued` looking like progress.
+   */
+  app.get('/v1/ready', async (_req, reply) => {
+    const worker = options.worker?.status();
+    const checks = {
+      api: true,
+      // In-memory: present but not durable, and it says so.
+      storage: { available: true, durable: false, kind: 'in-memory' },
+      worker: worker
+        ? { attached: true, running: worker.running, workerId: worker.workerId,
+            claimed: worker.claimed, completed: worker.completed, failed: worker.failed }
+        : { attached: false },
+      execution: options.executionUnavailable
+        ? { available: false, reason: options.executionUnavailable }
+        : { available: true },
+    };
+
+    const ready = Boolean(worker?.running) && !options.executionUnavailable;
+    return reply.status(ready ? 200 : 503).send({
+      ready,
+      checks,
+      ...(ready
+        ? {}
+        : {
+            note: !worker
+              ? 'No worker is attached: queued runs will never be claimed.'
+              : options.executionUnavailable ??
+                'The worker is attached but not running.',
+          }),
+    });
+  });
 
   /**
    * Discovery root.
@@ -296,6 +339,26 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     requireScope(req, 'runs:read');
     const q = cursorSchema.parse(req.query);
     return stores.runs.list(req.ctx, q);
+  });
+
+  /** Entries recorded against one run, in chain order. */
+  app.get<{ Params: { id: string } }>('/v1/runs/:id/entries', async (req, reply) => {
+    requireScope(req, 'audit:read');
+    const run = await stores.runs.get(req.ctx, req.params.id);
+    if (!run) {
+      return reply
+        .status(404)
+        .type('application/problem+json')
+        .send(problem('not-found', 'Run not found', 404));
+    }
+    const items = await stores.audit.entriesForSubject(req.ctx, req.params.id);
+    // Both sequence spaces, named. `seq` is the global chain position; the
+    // index within this run is a different number, and conflating them
+    // produces nonsense like "4 of 1".
+    return {
+      items: items.map((e, i) => ({ ...e, runIndex: i + 1 })),
+      total: items.length,
+    };
   });
 
   app.get<{ Params: { id: string } }>('/v1/runs/:id', async (req, reply) => {
