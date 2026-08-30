@@ -32,7 +32,7 @@ import {
   SelfHostedSection,
 } from '../components/landing/InfrastructureSection';
 import { PipelineSection, ProblemSection } from '../components/landing/ProblemSection';
-import { ProvidersSection } from '../components/landing/ProvidersSection';
+import { LocalComputeSection, ProvidersSection } from '../components/landing/ProvidersSection';
 
 const TITLE = 'agent-eval — Evaluate AI agents. Prove what happened.';
 const DESCRIPTION =
@@ -134,6 +134,7 @@ export function LandingPage({ authenticated }: { authenticated: boolean }) {
         <AuditSection />
         <ReproducibilitySection />
         <ProvidersSection />
+        <LocalComputeSection />
         <SelfHostedSection />
         <DeveloperSection />
         <ArchitectureSection />

@@ -11,6 +11,7 @@
  */
 
 import { buildApp } from './api/app.js';
+import { detectCapabilities, toEnvironmentRecord } from './system/capabilities.js';
 import { SecretBox } from './auth/encryption.js';
 import { ProviderCredentialStore } from './auth/provider-credentials.js';
 import { DEV_TOKEN_EXAMPLE } from './api/docs.js';
@@ -49,6 +50,16 @@ const worker = new RunWorker({
       credentials.revealForProviderCall(tenantId, credentialId),
     ),
   pollIntervalMs: Number(process.env.WORKER_POLL_MS ?? 500),
+  // Probed once per claimed run. A failure here must not fail the run: the
+  // evidence then records no environment, which is honest, rather than a
+  // guess about the host.
+  captureEnvironment: async () => {
+    try {
+      return toEnvironmentRecord(await detectCapabilities());
+    } catch {
+      return undefined;
+    }
+  },
   log: (level, message, fields) => {
     // Structured, correlated by runId. Never carries secrets.
     console.log(JSON.stringify({ level, message, ...fields, at: new Date().toISOString() }));

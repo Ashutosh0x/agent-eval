@@ -13,6 +13,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { anthropicProvider } from '../../providers/anthropic.js';
 import { googleProvider } from '../../providers/google.js';
+import { nimProvider, tensorRtLlmProvider, vllmProvider } from '../../providers/local-runtimes.js';
 import { ollamaProvider } from '../../providers/ollama.js';
 import {
   deepseekProvider,
@@ -34,6 +35,11 @@ const ALL: ModelProvider[] = [
   mistralProvider,
   minimaxProvider,
   ollamaProvider,
+  // Local inference runtimes. They speak the OpenAI protocol, so they belong
+  // in the same contract battery as everything else that does.
+  vllmProvider,
+  tensorRtLlmProvider,
+  nimProvider,
   openaiCompatibleProvider,
 ];
 
@@ -265,8 +271,13 @@ describe('connection tests are real requests', () => {
 
   it('never reports connected without a successful request', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('fetch failed')));
-    for (const p of ALL) {
-      const status = await p.testConnection(CONFIG);
+    // Concurrently, because each adapter retries a network failure once with a
+    // 500ms backoff. Sequentially this cost 500ms per provider and sat just
+    // under the default timeout at nine of them; the three local runtimes
+    // pushed it over. The providers are independent, so there was never a
+    // reason to serialise them.
+    const statuses = await Promise.all(ALL.map((p) => p.testConnection(CONFIG)));
+    for (const status of statuses) {
       expect(status.status).not.toBe('connected');
     }
   });

@@ -26,7 +26,7 @@ import {
 export function OpenSourceSection() {
   return (
     <Section>
-      <SectionLabel index="12">Open source</SectionLabel>
+      <SectionLabel index="13">Open source</SectionLabel>
       <SectionHeading sub="The evidence layer is the product, so it is the part most worth reading. The Merkle implementation, the hash chain, the canonicalization and the verifier are all in the repository, along with the tests that hold them.">
         Built in the open.
       </SectionHeading>

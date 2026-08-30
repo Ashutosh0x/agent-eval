@@ -253,6 +253,71 @@ export interface ModelListing {
   note?: string;
 }
 
+
+// --------------------------------------------------------------------- system
+
+/**
+ * A measured fact, or the reason it could not be measured.
+ *
+ * The UI must render 'unavailable' as unavailable. A probe that could not run
+ * is not a zero, and showing it as one turns a missing tool into a reading.
+ */
+export type SystemProbe<T> =
+  | { status: 'ok'; value: T }
+  | { status: 'unavailable'; reason: string }
+  | { status: 'unknown'; reason: string };
+
+export interface GpuDevice {
+  name: string;
+  computeCapability?: string;
+  memoryTotalMiB?: number;
+  driverVersion?: string;
+}
+
+export interface SystemCapabilities {
+  platform: string;
+  architecture: string;
+  isArm64: boolean;
+  kernel: string;
+  cpu: { model?: string; cores: number };
+  memory: { totalBytes: number; freeBytes: number; unified: SystemProbe<boolean> };
+  gpu: SystemProbe<GpuDevice[]>;
+  cuda: SystemProbe<string>;
+  driver: SystemProbe<string>;
+  docker: SystemProbe<string>;
+  nvidiaContainerRuntime: SystemProbe<boolean>;
+  os: SystemProbe<string>;
+  dgxSpark: {
+    detected: boolean;
+    /** Why the verdict went the way it did, so it can be checked. */
+    evidence: string[];
+    target: 'local' | 'docker' | 'dgx-spark' | 'server' | 'unknown';
+  };
+  detectedAt: string;
+}
+
+export interface SystemHealth {
+  summary: string;
+  deploymentTarget: string;
+  dgxSpark: boolean;
+  components: Record<string, { status: 'ok' | 'unavailable' | 'unknown'; detail: string }>;
+  checkedAt: string;
+}
+
+export interface RuntimeStatus {
+  id: string;
+  displayName: string;
+  locality: 'local' | 'remote';
+  dgxSpark: { support: 'documented' | 'unsupported' | 'unknown'; note: string };
+  requiresBaseUrl: boolean;
+  defaultPort?: number;
+  /** An operator set an endpoint. Says nothing about whether it answered. */
+  configured: boolean;
+  baseUrl?: string;
+  connection: ConnectionStatus | { status: 'not_tested'; detail: string };
+  platformNote: string;
+}
+
 export const api = {
   discovery: () => request<Record<string, unknown>>('/v1'),
 
@@ -338,6 +403,23 @@ export const api = {
       }),
     revoke: (id: string) =>
       request<ProviderCredential>(`/v1/provider-credentials/${id}/revoke`, { method: 'POST' }),
+  },
+
+  system: {
+    capabilities: () => request<SystemCapabilities>('/v1/system/capabilities'),
+    health: () => request<SystemHealth>('/v1/system/health'),
+    runtimes: () =>
+      request<{ items: RuntimeStatus[]; host: { target: string; isArm64: boolean } }>(
+        '/v1/system/runtimes',
+      ),
+    gpu: () =>
+      request<{
+        devices: SystemProbe<GpuDevice[]>;
+        telemetry: SystemProbe<
+          { utilizationPercent?: number; memoryUsedMiB?: number; temperatureCelsius?: number; powerDrawWatts?: number }[]
+        >;
+        sampledAt: string;
+      }>('/v1/system/gpu'),
   },
 
   audit: {

@@ -19,6 +19,7 @@
 
 import type { AuditStore, RunStore, TenantContext } from '../store/index.js';
 import type { Executor } from './executor.js';
+import type { ExecutionEnvironmentRecord } from '../system/capabilities.js';
 
 export interface WorkerOptions {
   runs: RunStore;
@@ -30,6 +31,14 @@ export interface WorkerOptions {
   /** How long to wait when the queue is empty. */
   pollIntervalMs?: number;
   log?: (level: 'info' | 'warn' | 'error', message: string, fields?: Record<string, unknown>) => void;
+  /**
+   * Probes the host this run executes on.
+   *
+   * Optional and injected rather than imported, so the worker never shells out
+   * during a unit test and a deployment that cannot probe simply records
+   * nothing. Its absence means "unknown machine", never a fabricated one.
+   */
+  captureEnvironment?: () => Promise<ExecutionEnvironmentRecord | undefined>;
 }
 
 export interface WorkerStatus {
@@ -128,6 +137,24 @@ export class RunWorker {
       subject: run.id,
       payload: { worker: this.workerId, backend },
     });
+
+    // Capture the host before executing. This is what makes the evidence able
+    // to say which machine produced the result, and it must be recorded even
+    // when the run subsequently fails.
+    const environment = await this.options.captureEnvironment?.();
+    if (environment) {
+      await this.options.runs.setEnvironment?.(run.id, environment);
+      await this.options.audit.append(ctx, {
+        action: 'compute.node.selected',
+        subject: run.id,
+        payload: {
+          target: environment.deploymentTarget,
+          architecture: environment.architecture,
+          ...(environment.gpuName ? { gpu: environment.gpuName } : {}),
+          ...(environment.cudaVersion ? { cuda: environment.cudaVersion } : {}),
+        },
+      });
+    }
 
     const executor = this.options.selectExecutor(backend);
     const blocked = executor.unavailableReason();

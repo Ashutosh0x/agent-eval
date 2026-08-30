@@ -40,7 +40,7 @@ const LAYERS: { label: string; detail: string; Icon: LucideIcon }[] = [
 export function ArchitectureSection() {
   return (
     <Section>
-      <SectionLabel index="10">Architecture</SectionLabel>
+      <SectionLabel index="11">Architecture</SectionLabel>
       <SectionHeading sub="Every caller enters through one API, and every run leaves one trail. There is no second path that writes evidence.">
         One execution layer.
         <br />
@@ -70,7 +70,7 @@ export function ArchitectureSection() {
 export function SelfHostedSection() {
   return (
     <Section>
-      <SectionLabel index="08">Deployment</SectionLabel>
+      <SectionLabel index="09">Deployment</SectionLabel>
       <SectionHeading sub="Evaluation traces contain prompts, model outputs and often customer data. Sending them to a vendor in order to prove compliance is a strange way to comply.">
         Your evaluations.
         <br />
@@ -166,7 +166,7 @@ const SECURITY: { Icon: LucideIcon; title: string; body: string }[] = [
 export function SecuritySection() {
   return (
     <Section>
-      <SectionLabel index="11">Security</SectionLabel>
+      <SectionLabel index="12">Security</SectionLabel>
       <SectionHeading sub="Each of these is implemented and covered by tests. Mechanisms that are designed but not built — the VM isolation backends and their egress control — are listed as absent in the documentation rather than implied here.">
         Security is part of the execution model.
       </SectionHeading>

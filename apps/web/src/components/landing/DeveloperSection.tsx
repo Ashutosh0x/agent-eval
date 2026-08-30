@@ -67,7 +67,7 @@ const SURFACES = [
 export function DeveloperSection() {
   return (
     <Section>
-      <SectionLabel index="09">Developer experience</SectionLabel>
+      <SectionLabel index="10">Developer experience</SectionLabel>
       <SectionHeading sub="Three surfaces over one API. The CLI exits non-zero when a check fails, so it is usable as a pipeline gate.">
         Built for engineers.
       </SectionHeading>

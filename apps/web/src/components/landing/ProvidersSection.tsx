@@ -98,3 +98,89 @@ export function ProvidersSection() {
     </Section>
   );
 }
+
+/**
+ * Local compute.
+ *
+ * Deliberately short, and deliberately not an NVIDIA advertisement. DGX Spark
+ * is a supported place to put compute, not what this product is. Every figure
+ * quoted is attributed to NVIDIA documentation and the theoretical one stays
+ * labelled theoretical — a page arguing that evidence beats claims cannot
+ * quote a peak number as achieved throughput.
+ */
+export function LocalComputeSection() {
+  return (
+    <Section>
+      <SectionLabel index="08">Local compute</SectionLabel>
+      <SectionHeading sub="Serve models on your own hardware and keep the evidence trail. The control plane detects what the machine is, records it into the bundle, and says so plainly when it cannot.">
+        Run agent evaluations locally.
+      </SectionHeading>
+
+      <div className="mt-12 grid gap-5 lg:grid-cols-[1fr_minmax(0,380px)]">
+        <Reveal>
+          <div className="h-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-6">
+            <p className="text-sm font-medium">NVIDIA DGX Spark as an evaluation node</p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+              An Arm workstation with an integrated Grace Blackwell GPU, serving models through
+              vLLM, TensorRT-LLM, NIM or Ollama while agent-eval records the run. Hardware,
+              driver and CUDA versions are probed from the machine and written into the evidence
+              bundle, so a reviewer can later establish which system produced a result.
+            </p>
+            <dl className="mt-5 grid gap-px overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--border)] sm:grid-cols-3">
+              {[
+                ['SoC', 'Grace Blackwell GB10'],
+                ['Memory', '128 GB LPDDR5x unified'],
+                ['Bandwidth', '273 GB/s'],
+              ].map(([k, v]) => (
+                <div key={k} className="bg-[var(--surface-raised)] p-4">
+                  <dt className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                    {k}
+                  </dt>
+                  <dd className="mt-1.5 text-sm">{v}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 text-xs leading-relaxed text-[var(--text-muted)]">
+              Specifications published by NVIDIA, not measured by this project. NVIDIA also states
+              up to 1 PFLOP at FP4 with sparsity — a peak theoretical figure, which is why it is
+              not presented here as performance you will observe.
+            </p>
+          </div>
+        </Reveal>
+
+        <Reveal delay={100}>
+          <div className="h-full rounded-xl border border-[var(--border)] bg-[var(--surface-raised)] p-6">
+            <p className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+              What the platform detects
+            </p>
+            <ul className="mt-4 space-y-0">
+              {[
+                'Architecture and kernel',
+                'GPU, compute capability, driver',
+                'CUDA toolkit or driver maximum',
+                'NVIDIA container runtime',
+                'Runtime endpoints that answered',
+              ].map((item) => (
+                <li
+                  key={item}
+                  className="flex items-center gap-2.5 border-b border-[var(--border)] py-2 text-sm last:border-0"
+                >
+                  <span
+                    className="inline-block size-1.5 shrink-0 rounded-full"
+                    style={{ background: 'var(--sealed)' }}
+                    aria-hidden="true"
+                  />
+                  <span className="text-[var(--text-muted)]">{item}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 border-t border-[var(--border)] pt-3 text-xs leading-relaxed text-[var(--text-muted)]">
+              A host that is not a DGX Spark reports that, with the reason, and keeps working
+              against remote providers.
+            </p>
+          </div>
+        </Reveal>
+      </div>
+    </Section>
+  );
+}

@@ -32,6 +32,7 @@
 import { createHash } from 'node:crypto';
 import type { AuditEntry } from './audit-log.js';
 import { verifyEntrySlice } from './audit-log.js';
+import type { ExecutionEnvironmentRecord } from '../system/capabilities.js';
 import { canonicalize } from './canonical.js';
 import type { ConsistencyProof, InclusionProof } from './merkle-tree.js';
 import { verifyInclusion } from './proof-verifier.js';
@@ -69,6 +70,16 @@ export interface BundleContents {
   inclusionProofs: Record<number, InclusionProof>;
   /** Optional proof that the log extends a previously published root. */
   consistency?: { previousRoot: string; proof: ConsistencyProof };
+  /**
+   * The machine that executed the run.
+   *
+   * This is what lets a reviewer answer "what actually produced this result?"
+   * months later — architecture, GPU, CUDA and driver, not just the model
+   * name. Optional because a bundle cut before this existed is still valid,
+   * and because a deployment that cannot probe its own hardware should record
+   * nothing rather than guess.
+   */
+  executionEnvironment?: ExecutionEnvironmentRecord;
   mappings: ArticleMapping[];
   retention: {
     /** Earliest date this may be deleted. */

@@ -40,6 +40,7 @@ import type { RunWorker } from '../worker/worker.js';
 import { ProviderCredentialStore } from '../auth/provider-credentials.js';
 import { SecretBox } from '../auth/encryption.js';
 import { registerProviderRoutes } from './routes/providers.js';
+import { registerSystemRoutes } from './routes/system.js';
 import {
   ALL_SCOPES,
   ApiKeyError,
@@ -418,6 +419,40 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     return run;
   });
 
+  /**
+   * Which machine executed this run.
+   *
+   * A separate route from the manifest because they answer different
+   * questions: the manifest is what was requested, this is what served it.
+   * Returns 404 with a reason when the run executed before environment
+   * capture existed, or on a host that could not probe itself — an empty
+   * object would read as "no GPU" rather than "not recorded".
+   */
+  app.get<{ Params: { id: string } }>('/v1/runs/:id/environment', async (req, reply) => {
+    requireScope(req, 'runs:read');
+    const run = await stores.runs.get(req.ctx, req.params.id);
+    if (!run) {
+      return reply
+        .status(404)
+        .type('application/problem+json')
+        .send(problem('not-found', 'Run not found', 404));
+    }
+    if (!run.executionEnvironment) {
+      return reply
+        .status(404)
+        .type('application/problem+json')
+        .send(
+          problem(
+            'not-recorded',
+            'No execution environment recorded',
+            404,
+            'This run executed without host capture, so the machine that produced it is not known.',
+          ),
+        );
+    }
+    return run.executionEnvironment;
+  });
+
   app.get<{ Params: { id: string } }>('/v1/runs/:id/manifest', async (req, reply) => {
     requireScope(req, 'runs:read');
     const run = await stores.runs.get(req.ctx, req.params.id);
@@ -607,6 +642,12 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
           logRoot: root,
           logSize: (await stores.audit.root()).size,
           inclusionProofs,
+          // Carried from the run so the bundle can answer "which machine?".
+          // Absent when the worker could not probe the host, rather than
+          // filled with a plausible default.
+          ...(run.executionEnvironment
+            ? { executionEnvironment: run.executionEnvironment }
+            : {}),
           retention: {
             retainUntil: retention.retainUntil,
             policy: retention.governingRule,
@@ -828,6 +869,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
 
   registerProviderRoutes(app, { credentials, audit: stores.audit, requireScope });
+
+  registerSystemRoutes(app, { requireScope });
 
   // ------------------------------------------------------------------- audit
 

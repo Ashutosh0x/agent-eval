@@ -21,6 +21,11 @@ import {
   openaiProvider,
   xaiProvider,
 } from './openai-compatible.js';
+import {
+  nimProvider,
+  tensorRtLlmProvider,
+  vllmProvider,
+} from './local-runtimes.js';
 import { ollamaProvider } from './ollama.js';
 import { ProviderError, type ModelProvider, type ProviderConfig, type Support } from './types.js';
 
@@ -109,6 +114,9 @@ const ENV_KEYS: Record<string, string> = {
 
 const ENV_BASE_URLS: Record<string, string> = {
   ollama: 'OLLAMA_BASE_URL',
+  vllm: 'VLLM_BASE_URL',
+  'tensorrt-llm': 'TENSORRT_LLM_BASE_URL',
+  nim: 'NIM_BASE_URL',
   'openai-compatible': 'OPENAI_COMPATIBLE_BASE_URL',
 };
 
@@ -137,6 +145,13 @@ export const providerRegistry = new ProviderRegistry()
   .register(mistralProvider)
   .register(minimaxProvider)
   .register(ollamaProvider)
+  // Local inference runtimes. They speak the OpenAI protocol, so they are
+  // ordinary providers here rather than a separate subsystem -- the evaluator
+  // resolves them from this registry like any other, and nothing downstream
+  // needs to know whether a model was served from this machine or a vendor.
+  .register(vllmProvider)
+  .register(tensorRtLlmProvider)
+  .register(nimProvider)
   .register(openaiCompatibleProvider);
 
 export * from './types.js';

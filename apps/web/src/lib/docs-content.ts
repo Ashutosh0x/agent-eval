@@ -13,6 +13,8 @@
  * wrong model of what they are running.
  */
 
+import { DGX_SPARK_GROUP } from './docs-dgx-spark';
+
 export type Block =
   | { kind: 'p'; text: string }
   | { kind: 'code'; lang: string; code: string; caption?: string }
@@ -790,6 +792,8 @@ export const DOC_GROUPS: DocGroup[] = [
       },
     ],
   },
+
+  DGX_SPARK_GROUP,
 
   {
     id: 'limits',

@@ -363,12 +363,23 @@ describe('provider status is never asserted', () => {
       url: '/v1/providers',
       headers: { authorization: FULL },
     });
-    // Ollama needs no key, so it is the only one configured by default.
+    // Only the runtimes that need no API key report as credential-configured.
+    // Note that this says nothing about whether they work: NIM appears here
+    // and still has no base URL, which is exactly why the UI keeps "has a
+    // credential" and "answered a request" as separate columns.
     const configured = res
       .json()
       .items.filter((p: { credentialConfigured: boolean }) => p.credentialConfigured)
+      .map((p: { id: string }) => p.id)
+      .sort();
+    expect(configured).toEqual(['nim', 'ollama', 'tensorrt-llm', 'vllm']);
+
+    // Every provider that does need a key is absent from that list.
+    const keyed = res
+      .json()
+      .items.filter((p: { requiresApiKey: boolean }) => p.requiresApiKey)
       .map((p: { id: string }) => p.id);
-    expect(configured).toEqual(['ollama']);
+    for (const id of keyed) expect(configured).not.toContain(id);
   });
 });
 

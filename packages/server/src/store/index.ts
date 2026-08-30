@@ -17,6 +17,7 @@
  */
 
 import type { AuditEntry, ConsistencyProof, InclusionProof } from '../evidence/index.js';
+import type { ExecutionEnvironmentRecord } from '../system/capabilities.js';
 import { AuditLog } from '../evidence/index.js';
 
 export interface TenantContext {
@@ -81,6 +82,15 @@ export interface RunRecord {
    * — the secret is decrypted at execution time and never stored here.
    */
   credentialId?: string;
+  /**
+   * The machine this run executed on, captured when the worker claimed it.
+   *
+   * Recorded on the run rather than the manifest because the manifest states
+   * what was *requested* and must be identical for two runs of the same
+   * configuration; this states what actually served it, which legitimately
+   * differs between two runs of the same manifest on different nodes.
+   */
+  executionEnvironment?: ExecutionEnvironmentRecord;
 }
 
 export interface RunStore {
@@ -88,6 +98,11 @@ export interface RunStore {
   get(ctx: TenantContext, id: string): Promise<RunRecord | null>;
   list(ctx: TenantContext, q: { cursor?: string; limit: number }): Promise<Page<RunRecord>>;
   setStatus(ctx: TenantContext, id: string, status: RunStatus): Promise<RunRecord | null>;
+  /**
+   * Record which machine executed a run. Cross-tenant like claim, because the
+   * worker serves the whole deployment rather than one tenant.
+   */
+  setEnvironment?(id: string, environment: ExecutionEnvironmentRecord): Promise<void>;
   /**
    * Atomically move one queued run to running and stamp the claimant.
    *
@@ -251,6 +266,14 @@ export class InMemoryRunStore implements RunStore {
     const updated = { ...r, status, ...(status === 'completed' ? { completedAt: new Date() } : {}) };
     this.runs.set(id, updated);
     return updated;
+  }
+
+  async setEnvironment(id: string, environment: ExecutionEnvironmentRecord): Promise<void> {
+    // Keyed by id alone, like claimNext: the worker acts for the deployment
+    // rather than for one tenant, and it has already been handed this run.
+    const r = this.runs.get(id);
+    if (!r) return;
+    this.runs.set(id, { ...r, executionEnvironment: environment });
   }
 
   async claimNext(workerId: string): Promise<RunRecord | null> {

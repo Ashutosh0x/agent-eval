@@ -252,6 +252,43 @@ mostly assertions of absence: a credential store is defined by its leaks.
 
 ---
 
+## Local compute: NVIDIA DGX Spark
+
+agent-eval turns local AI compute into a verifiable evaluation environment.
+DGX Spark is a supported place to put that compute — not a requirement, and
+not an affiliation.
+
+```bash
+pnpm dgx:check          # real probes; exits non-zero when a required one fails
+```
+
+The control plane detects what the host actually is and writes it into the
+evidence bundle, so a reviewer can later establish which machine produced a
+result:
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" localhost:8080/v1/system/capabilities
+curl -H "Authorization: Bearer $TOKEN" localhost:8080/v1/system/health
+curl -H "Authorization: Bearer $TOKEN" localhost:8080/v1/system/runtimes
+```
+
+Nothing is assumed. A host that is not a DGX Spark reports that, with the
+reason, and keeps working against remote providers. Local runtimes — vLLM,
+TensorRT-LLM, NIM, Ollama — are configured by base URL and report *configured*
+and *connected* as separate facts.
+
+| | |
+| --- | --- |
+| Hardware figures | Published by NVIDIA, attributed, never measured by this project |
+| `1 PFLOP FP4` | NVIDIA's peak theoretical figure *with sparsity* — not throughput you will observe |
+| Multi-Spark | Documented (NVIDIA supports up to 4 nodes via switch, 3 direct) — **not implemented here** |
+| Hardware validation | **NOT RUN** — no DGX Spark was available; see [docs/dgx-spark.md](docs/dgx-spark.md) |
+
+Full detail: **[DGX Spark deployment](docs/dgx-spark.md)**, or `/docs/dgx-spark-overview`
+in the running dashboard.
+
+---
+
 ## Documentation
 
 The dashboard ships a searchable documentation site at **`/docs`** covering
