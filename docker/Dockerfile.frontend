@@ -1,0 +1,19 @@
+FROM node:20-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+FROM base AS development
+WORKDIR /app
+CMD ["pnpm", "run", "--filter", "frontend", "dev"]
+
+FROM base AS build
+WORKDIR /app
+COPY . .
+RUN pnpm install --frozen-lockfile
+RUN pnpm run build --filter frontend...
+
+FROM nginx:alpine AS runtime
+COPY --from=build /app/apps/frontend/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

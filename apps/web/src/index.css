@@ -1,0 +1,103 @@
+/*
+ * IBM Plex, self-hosted in production. A data-residency buyer will ask whether
+ * the app calls a third-party font CDN, and "no" is a better answer than an
+ * explanation — so this @import is a development convenience to be replaced
+ * with local woff2 before any deployment.
+ *
+ * It sits above the @tailwind directives because CSS requires @import to
+ * precede every other rule; below them the browser drops it silently.
+ */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --surface: #f7f8fa;
+  --surface-raised: #ffffff;
+  --text: #16202b;
+  --text-muted: #5b6875;
+  --border: #dfe3e8;
+  --sealed: #1f6f4a;
+  --broken: #a32b2b;
+  --pending: #8a6d2f;
+}
+
+:root.dark {
+  --surface: #0e1116;
+  --surface-raised: #151a22;
+  --text: #f7f8fa;
+  --text-muted: #97a3b0;
+  --border: #232b36;
+  /* Separate values: the light ones fail contrast on this ground. */
+  --sealed: #278d5e;
+  --broken: #d15151;
+  --pending: #977733;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--surface);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers that sit in columns must align. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A focus ring that survives both themes. WCAG 2.2 focus appearance. */
+:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+ * Print. The evidence bundle is the artifact that lands on an auditor's desk,
+ * and EN 301 549 covers electronic documents as well as the web app.
+ */
+@media print {
+  :root {
+    --surface: #ffffff;
+    --surface-raised: #ffffff;
+    --text: #000000;
+    --border: #999999;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  /* A mapping must never be separated from its caveat across a page break. */
+  .mapping {
+    break-inside: avoid;
+  }
+
+  /* Caveats cannot be collapsed away in print. */
+  .caveat {
+    display: block !important;
+  }
+
+  a[href]::after {
+    content: ' (' attr(href) ')';
+    font-size: 11px;
+  }
+}

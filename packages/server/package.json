@@ -1,0 +1,28 @@
+{
+  "name": "@agent-eval/server",
+  "version": "1.0.0",
+  "description": "Evaluation control plane: evidence, policy, and run orchestration",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@fastify/swagger": "^9",
+    "@fastify/swagger-ui": "^6",
+    "fastify": "^5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3",
+    "vitest": "^2.1.8"
+  }
+}

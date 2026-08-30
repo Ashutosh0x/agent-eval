@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+
+# Secrets and local config
+.env
+.env.local
+.env.*.local
+
+# Local state
+*.log
+coverage/
+.DS_Store
+spec.tmp.json

@@ -1,0 +1,17 @@
+{
+  "name": "@agent-eval/sdk",
+  "version": "1.0.0",
+  "description": "SDK for agent-eval",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/node-fetch": "^2.6.11",
+    "typescript": "^5.3.3"
+  }
+}

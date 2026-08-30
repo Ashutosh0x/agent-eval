@@ -1,0 +1,22 @@
+{
+  "name": "@agent-eval/cli",
+  "version": "1.0.0",
+  "description": "CLI for agent-eval",
+  "bin": {
+    "agent-eval": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@agent-eval/sdk": "workspace:*",
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "ora": "^5.4.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3"
+  }
+}
