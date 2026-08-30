@@ -27,10 +27,9 @@ produced them.
 
 ## Demo
 
-<video src="https://raw.githubusercontent.com/Ashutosh0x/agent-eval/main/docs/media/agent-eval-demo.mp4" controls muted playsinline width="100%"></video>
+[![Watch the demo](docs/media/demo-poster.jpg)](https://github.com/Ashutosh0x/agent-eval/raw/main/docs/media/agent-eval-demo.mp4)
 
-If the player above does not appear in your client, the file is at
-[`docs/media/agent-eval-demo.mp4`](docs/media/agent-eval-demo.mp4).
+*Click to play — 64 seconds. Providers, credential storage, a real run, and offline bundle verification.*
 
 ---
 
