@@ -72,6 +72,15 @@ export interface RunRecord {
   claimedAt?: Date;
   /** Populated on failure. A run that failed must be able to say why. */
   failureReason?: string;
+  /**
+   * Which stored provider credential this run should spend, if any.
+   *
+   * Deliberately outside the manifest: the manifest is the reproducibility
+   * record and is hashed into evidence, and which credential paid for a call
+   * is an operational fact rather than part of what was run. A reference only
+   * — the secret is decrypted at execution time and never stored here.
+   */
+  credentialId?: string;
 }
 
 export interface RunStore {

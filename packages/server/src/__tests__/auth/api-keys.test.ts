@@ -9,6 +9,7 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../../api/app.js';
 import {
+  type ApiKeyRecord,
   InMemoryApiKeyStore,
   KEY_PREFIX,
   hashSecret,
@@ -85,10 +86,11 @@ describe('secret handling', () => {
 
   it('stores a hash, never the plaintext', async () => {
     const { secret } = (await createKey()).json();
-    const record = await apiKeys.authenticate(secret);
-    expect(record).not.toBeNull();
-    expect(record!.hashedSecret).toBe(hashSecret(secret));
-    expect(record!.hashedSecret).not.toBe(secret);
+    const result = await apiKeys.authenticate(secret);
+    expect(result.ok).toBe(true);
+    const record = (result as { ok: true; key: ApiKeyRecord }).key;
+    expect(record.hashedSecret).toBe(hashSecret(secret));
+    expect(record.hashedSecret).not.toBe(secret);
     // Nothing in the stored record is the secret.
     expect(JSON.stringify(record)).not.toContain(secret);
   });
@@ -132,18 +134,26 @@ describe('secret handling', () => {
 describe('authentication with a key', () => {
   it('resolves a valid secret', async () => {
     const { key, secret } = (await createKey()).json();
-    const record = await apiKeys.authenticate(secret);
-    expect(record?.id).toBe(key.id);
-    expect(record?.scopes).toEqual(['runs:read', 'audit:read']);
+    const result = await apiKeys.authenticate(secret);
+    expect(result.ok).toBe(true);
+    const record = (result as { ok: true; key: ApiKeyRecord }).key;
+    expect(record.id).toBe(key.id);
+    expect(record.scopes).toEqual(['runs:read', 'audit:read']);
   });
 
   it('rejects an unknown secret', async () => {
     await createKey();
-    expect(await apiKeys.authenticate(`${KEY_PREFIX}not-a-real-key`)).toBeNull();
+    expect(await apiKeys.authenticate(`${KEY_PREFIX}not-a-real-key`)).toEqual({
+      ok: false,
+      reason: 'unknown',
+    });
   });
 
   it('rejects a secret with the wrong prefix', async () => {
-    expect(await apiKeys.authenticate('bearer-token-not-an-api-key')).toBeNull();
+    expect(await apiKeys.authenticate('bearer-token-not-an-api-key')).toEqual({
+      ok: false,
+      reason: 'unknown',
+    });
   });
 
   it('rejects a revoked key', async () => {
@@ -153,7 +163,9 @@ describe('authentication with a key', () => {
       url: `/v1/api-keys/${key.id}/revoke`,
       headers: { authorization: FULL },
     });
-    expect(await apiKeys.authenticate(secret)).toBeNull();
+    // A revoked key is distinguishable from a typo: the operator debugging a
+    // broken integration needs to know which of the two happened.
+    expect(await apiKeys.authenticate(secret)).toEqual({ ok: false, reason: 'revoked' });
   });
 
   it('records last used', async () => {

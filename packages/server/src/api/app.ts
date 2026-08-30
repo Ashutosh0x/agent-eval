@@ -37,9 +37,13 @@ import {
 import type { InMemoryAuditStore, Stores, TenantContext } from '../store/index.js';
 import { registerDocs } from './docs.js';
 import type { RunWorker } from '../worker/worker.js';
+import { ProviderCredentialStore } from '../auth/provider-credentials.js';
+import { SecretBox } from '../auth/encryption.js';
+import { registerProviderRoutes } from './routes/providers.js';
 import {
   ALL_SCOPES,
   ApiKeyError,
+  KEY_PREFIX,
   CONSEQUENTIAL_SCOPES,
   InMemoryApiKeyStore,
   SCOPE_DESCRIPTIONS,
@@ -61,6 +65,8 @@ export interface AppOptions {
   worker?: RunWorker;
   /** Why execution is unavailable, when it is. */
   executionUnavailable?: string | null;
+  /** Where provider credentials live. Defaults to an env-keyed store. */
+  credentials?: ProviderCredentialStore;
 }
 
 /**
@@ -103,6 +109,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const { stores, signer } = options;
   const authenticate = options.authenticate ?? devAuthenticate;
   const apiKeys = options.apiKeys ?? new InMemoryApiKeyStore();
+  const credentials = options.credentials ?? new ProviderCredentialStore(SecretBox.fromEnv());
 
   const app = Fastify({ logger: options.logger ?? false });
 
@@ -149,7 +156,44 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     if (PUBLIC_ROUTES.has(path)) return;
     if (PUBLIC_PREFIXES.some((prefix) => path === prefix || path.startsWith(prefix + '/'))) return;
     const header = req.headers.authorization;
-    const ctx = authenticate(header?.replace(/^Bearer\s+/i, ''));
+    const presented = header?.replace(/^Bearer\s+/i, '');
+
+    /**
+     * An issued API key is a real credential.
+     *
+     * Until this existed, keys could be created and revoked but never used —
+     * every request fell through to the development token parser, so a
+     * revoked key was indistinguishable from a valid one because neither was
+     * ever consulted.
+     *
+     * The prefix decides which path a bearer takes, so a key is verified
+     * against its stored hash rather than parsed as a dev token.
+     */
+    if (presented?.startsWith(KEY_PREFIX)) {
+      const result = await apiKeys.authenticate(presented);
+      if (!result.ok) {
+        const detail =
+          result.reason === 'revoked'
+            ? 'This API key has been revoked.'
+            : result.reason === 'expired'
+              ? 'This API key has expired.'
+              : 'This API key is not recognised.';
+        return reply
+          .status(401)
+          .header('WWW-Authenticate', 'Bearer realm="agent-eval"')
+          .type('application/problem+json')
+          .send(problem('unauthenticated', 'Authentication failed', 401, detail));
+      }
+      // Tenant and scopes come from the stored record, never from the caller.
+      req.ctx = {
+        tenantId: result.key.tenantId,
+        actor: `apikey:${result.key.id}`,
+        scopes: result.key.scopes,
+      };
+      return;
+    }
+
+    const ctx = authenticate(presented);
     if (!ctx) {
       // RFC 9110 §11.6.1: a 401 response MUST include WWW-Authenticate naming
       // the scheme. Without it a client cannot tell how to authenticate, and
@@ -316,6 +360,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       id: runId,
       status: 'queued',
       manifest: manifest as unknown as Record<string, unknown>,
+      ...(input.credentialId ? { credentialId: input.credentialId } : {}),
       retentionRules: input.retentionRules,
       createdAt: new Date(),
     });
@@ -711,7 +756,16 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       const { key, secret } = await apiKeys.create(
         req.ctx.tenantId,
         req.ctx.actor,
-        { name: input.name, description: input.description, scopes: input.scopes as Scope[] },
+        {
+          name: input.name,
+          description: input.description,
+          scopes: input.scopes as Scope[],
+          // Forwarded explicitly. Rebuilding this object field by field once
+          // dropped expiry here: the schema accepted it and the store
+          // implemented it, so a key created "expires in 30 days" reported an
+          // expiry it did not have and authenticated forever.
+          expiresInDays: input.expiresInDays,
+        },
         req.ctx.scopes,
       );
 
@@ -773,6 +827,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     return key;
   });
 
+  registerProviderRoutes(app, { credentials, audit: stores.audit, requireScope });
+
   // ------------------------------------------------------------------- audit
 
   app.get('/v1/audit', async (req) => {
@@ -790,7 +846,26 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   app.get<{ Params: { seq: string } }>('/v1/audit/:seq', async (req, reply) => {
     requireScope(req, 'audit:read');
-    const entry = await stores.audit.at(req.ctx, Number.parseInt(req.params.seq, 10));
+    // parseInt returns NaN for a non-numeric path segment, and NaN reached the
+    // store and threw — so GET /v1/audit/anything answered 500 rather than
+    // saying the path was wrong. A malformed identifier is the caller's error,
+    // not the server's.
+    const seq = Number.parseInt(req.params.seq, 10);
+    if (!Number.isInteger(seq) || seq < 0) {
+      return reply
+        .status(400)
+        .type('application/problem+json')
+        .send(
+          problem(
+            'invalid-sequence',
+            'Sequence number is not valid',
+            400,
+            `"${req.params.seq}" is not a non-negative integer.`,
+            'seq',
+          ),
+        );
+    }
+    const entry = await stores.audit.at(req.ctx, seq);
     if (!entry) {
       return reply
         .status(404)
@@ -807,7 +882,25 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
    */
   app.get<{ Params: { seq: string } }>('/v1/audit/:seq/inclusion-proof', async (req, reply) => {
     requireScope(req, 'audit:read');
+    // parseInt returns NaN for a non-numeric path segment, and NaN reached the
+    // store and threw — so GET /v1/audit/anything answered 500 rather than
+    // saying the path was wrong. A malformed identifier is the caller's error,
+    // not the server's.
     const seq = Number.parseInt(req.params.seq, 10);
+    if (!Number.isInteger(seq) || seq < 0) {
+      return reply
+        .status(400)
+        .type('application/problem+json')
+        .send(
+          problem(
+            'invalid-sequence',
+            'Sequence number is not valid',
+            400,
+            `"${req.params.seq}" is not a non-negative integer.`,
+            'seq',
+          ),
+        );
+    }
     const entry = await stores.audit.at(req.ctx, seq);
     if (!entry) {
       return reply

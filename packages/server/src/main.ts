@@ -11,6 +11,8 @@
  */
 
 import { buildApp } from './api/app.js';
+import { SecretBox } from './auth/encryption.js';
+import { ProviderCredentialStore } from './auth/provider-credentials.js';
 import { DEV_TOKEN_EXAMPLE } from './api/docs.js';
 import { InMemoryKeySource, Signer } from './evidence/index.js';
 import { createInMemoryStores } from './store/index.js';
@@ -32,12 +34,20 @@ const executionUnavailable =
     : new LocalProcessExecutor(localOptions).unavailableReason();
 
 const stores = createInMemoryStores();
+
+// One store, shared by the API that writes credentials and the worker that
+// spends them. Two instances would mean a credential saved through the
+// dashboard was invisible to every run.
+const credentials = new ProviderCredentialStore(SecretBox.fromEnv());
 const signer = new Signer(InMemoryKeySource.generate(process.env.SIGNING_KEY_ID ?? 'dev-key-1'));
 
 const worker = new RunWorker({
   runs: stores.runs,
   audit: stores.audit,
-  selectExecutor: (backend) => selectExecutor(backend, localOptions, modelExecEnabled),
+  selectExecutor: (backend) =>
+    selectExecutor(backend, localOptions, modelExecEnabled, (tenantId, credentialId) =>
+      credentials.revealForProviderCall(tenantId, credentialId),
+    ),
   pollIntervalMs: Number(process.env.WORKER_POLL_MS ?? 500),
   log: (level, message, fields) => {
     // Structured, correlated by runId. Never carries secrets.
@@ -45,7 +55,14 @@ const worker = new RunWorker({
   },
 });
 
-const app = await buildApp({ stores, signer, worker, executionUnavailable, logger: false });
+const app = await buildApp({
+  stores,
+  signer,
+  worker,
+  credentials,
+  executionUnavailable,
+  logger: false,
+});
 
 try {
   await app.listen({ port, host });

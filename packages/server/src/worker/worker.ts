@@ -153,7 +153,10 @@ export class RunWorker {
 
     let result;
     try {
-      result = await executor.execute(run.id, run.manifest);
+      result = await executor.execute(run.id, run.manifest, {
+        tenantId: run.tenantId,
+        ...(run.credentialId ? { credentialId: run.credentialId } : {}),
+      });
     } catch (e) {
       const reason = `Executor threw: ${(e as Error).message}`;
       await this.options.audit.append(ctx, {

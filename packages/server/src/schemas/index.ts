@@ -58,6 +58,12 @@ export const startRunSchema = z.object({
     sampling: samplingSchema,
     providerVersion: z.string().optional(),
   }),
+  /**
+   * Which stored provider credential to use. A reference, never a secret —
+   * the plaintext is decrypted server-side at execution time and appears in
+   * neither the manifest nor the audit chain.
+   */
+  credentialId: z.string().min(1).optional(),
   // Explicitly nullable rather than optional: "this run was not seeded" is a
   // fact worth recording, and an absent field cannot say it.
   seed: z.number().int().nullable(),
@@ -142,6 +148,20 @@ export const createApiKeySchema = z.object({
   scopes: z
     .array(z.string().min(1))
     .min(1, 'a key with no scopes can do nothing; select at least one'),
+  /** Omitted means the key does not expire on its own. */
+  expiresInDays: z.number().int().positive().max(3650).optional(),
+});
+
+export const createCredentialSchema = z.object({
+  providerId: z.string().min(1),
+  name: z.string().trim().min(1).max(80),
+  apiKey: z.string().min(1).optional(),
+  baseUrl: z.string().url().optional(),
+});
+
+export const testProviderSchema = z.object({
+  providerId: z.string().min(1),
+  credentialId: z.string().min(1).optional(),
 });
 
 export type CreateApiKeyInput = z.infer<typeof createApiKeySchema>;

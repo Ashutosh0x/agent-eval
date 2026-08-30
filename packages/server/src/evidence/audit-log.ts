@@ -140,6 +140,70 @@ export function verifyChain(entries: readonly AuditEntry[]): ChainVerification {
   return { valid: true, checked: entries.length };
 }
 
+/**
+ * Verify a *filtered* set of entries — one run's entries out of a shared log.
+ *
+ * `verifyChain` is the wrong tool for this and using it was a real bug: it
+ * requires seq to equal position and each entry to name its predecessor's
+ * hash, which holds only for a complete log starting at genesis. A bundle
+ * contains the entries for one run, so in any deployment that has ever done
+ * two things the slice starts at seq 5 or 300 and the check fails on a log
+ * that is perfectly intact. In practice the second run was unbundleable.
+ *
+ * What actually makes a slice trustworthy is two claims, and they are both
+ * checked here or alongside:
+ *
+ *   this entry was not modified   its digest recomputes (checked below)
+ *   this entry was in the log     a Merkle inclusion proof against the cited
+ *                                 root (checked by verifyBundle, which is
+ *                                 exactly what those proofs are for)
+ *
+ * Contiguity is deliberately not required, because a gap in a filtered view is
+ * not evidence of tampering — it is the filter. Ordering still is: entries
+ * must ascend, or the slice has been shuffled.
+ */
+export function verifyEntrySlice(entries: readonly AuditEntry[]): ChainVerification {
+  let previousSeq = -1;
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i]!;
+
+    if (entry.seq <= previousSeq) {
+      return {
+        valid: false,
+        checked: i,
+        brokenAt: entry.seq,
+        reason: `entry at position ${i} claims seq ${entry.seq}, which does not follow ${previousSeq}; the slice is reordered or contains a duplicate`,
+      };
+    }
+
+    const { entryHash, ...rest } = entry;
+    let recomputed: string;
+    try {
+      recomputed = entryDigest(rest);
+    } catch (e) {
+      return {
+        valid: false,
+        checked: i,
+        brokenAt: entry.seq,
+        reason: `entry ${entry.seq} cannot be canonicalized: ${(e as Error).message}`,
+      };
+    }
+    if (recomputed !== entryHash) {
+      return {
+        valid: false,
+        checked: i,
+        brokenAt: entry.seq,
+        reason: `entry ${entry.seq} was modified after it was written`,
+      };
+    }
+
+    previousSeq = entry.seq;
+  }
+
+  return { valid: true, checked: entries.length };
+}
+
 export class AuditLog {
   private entries: AuditEntry[] = [];
   private tree = new MerkleTree();

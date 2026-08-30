@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import { FileBadge, Moon, PlayCircle, ScrollText, Sun } from 'lucide-react';
+import { BookOpen, FileBadge, Moon, PlayCircle, ScrollText, Sun } from 'lucide-react';
 import { ProfileMenu } from './components/ProfileMenu';
+import { DocsPage } from './pages/Docs';
 import { EvidenceBundleView } from './pages/EvidenceBundle';
 import { ProfilePage } from './pages/Profile';
 import { AuditLog, Runs } from './pages/RunsAndAudit';
@@ -77,6 +78,9 @@ function Shell({ onSignOut }: { onSignOut: () => void }) {
                   Audit log
                 </Tab>
               ) : null}
+              <Tab to="/docs" Icon={BookOpen}>
+                Docs
+              </Tab>
               {bundleId ? (
                 <Tab to={`/bundles/${bundleId}`} Icon={FileBadge}>
                   Bundle
@@ -122,6 +126,8 @@ function Shell({ onSignOut }: { onSignOut: () => void }) {
           <Route path="/runs/:runId" element={<RunDetailPage />} />
           <Route path="/audit" element={<AuditLog />} />
           <Route path="/bundles/:id" element={<BundleRoute />} />
+          <Route path="/docs" element={<DocsPage />} />
+          <Route path="/docs/:sectionId" element={<DocsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings/*" element={<SettingsPage theme={theme} onThemeChange={setTheme} />} />
           <Route path="*" element={<NotFound />} />

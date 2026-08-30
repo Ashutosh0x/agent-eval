@@ -31,7 +31,7 @@
 
 import { createHash } from 'node:crypto';
 import type { AuditEntry } from './audit-log.js';
-import { verifyChain } from './audit-log.js';
+import { verifyEntrySlice } from './audit-log.js';
 import { canonicalize } from './canonical.js';
 import type { ConsistencyProof, InclusionProof } from './merkle-tree.js';
 import { verifyInclusion } from './proof-verifier.js';
@@ -181,7 +181,7 @@ export async function createBundle(input: BundleInput, signer: Signer): Promise<
     throw new BundleError('a bundle needs at least one audit entry');
   }
 
-  const chain = verifyChain(input.entries);
+  const chain = verifyEntrySlice(input.entries);
   if (!chain.valid) {
     throw new BundleError(
       `refusing to sign a bundle over a broken chain: ${chain.reason}. ` +
@@ -263,7 +263,7 @@ export function verifyBundle(bundle: EvidenceBundle, publicKeyPem: string): Bund
 
   const contents = bundle.payload;
 
-  const chain = verifyChain(contents.entries);
+  const chain = verifyEntrySlice(contents.entries);
   checks.chain = chain.valid;
   if (!chain.valid) failures.push(`audit chain: ${chain.reason}`);
 

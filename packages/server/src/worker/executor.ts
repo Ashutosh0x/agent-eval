@@ -48,7 +48,12 @@ export interface Executor {
   readonly backend: ExecutionBackend;
   /** Why this backend cannot run, or null when it can. */
   unavailableReason(): string | null;
-  execute(runId: string, manifest: Record<string, unknown>): Promise<ExecutionResult>;
+  /**
+   * `tenantId` is passed because a run may name a stored provider credential,
+   * and a credential lookup without its tenant is how one tenant ends up
+   * using another's key.
+   */
+  execute(runId: string, manifest: Record<string, unknown>, run?: RunContext): Promise<ExecutionResult>;
 }
 
 export class UnavailableExecutor implements Executor {
@@ -217,15 +222,39 @@ export class LocalProcessExecutor implements Executor {
  * `UnavailableExecutor`, which fails the run with a reason naming what is
  * missing. It does not silently substitute a different backend.
  */
+/**
+ * Resolves a stored provider credential, server-side.
+ *
+ * The worker is given a function rather than the credential store itself, so
+ * the executor cannot list, create or enumerate credentials — only decrypt the
+ * single one a run names.
+ */
+/**
+ * What the executor is told about the run beyond its manifest.
+ *
+ * `tenantId` travels with the credential reference because a credential
+ * lookup by id alone is how one tenant ends up spending another's key.
+ */
+export interface RunContext {
+  tenantId: string;
+  credentialId?: string;
+}
+
+export type CredentialResolver = (
+  tenantId: string,
+  credentialId: string,
+) => Promise<{ apiKey?: string; baseUrl?: string } | null>;
+
 export function selectExecutor(
   requested: string,
   local: LocalProcessOptions,
   modelExecEnabled = false,
+  resolveCredential?: CredentialResolver,
 ): Executor {
   // A run whose backend is `model` calls a provider; the isolation backends
   // are about where code runs, which is a separate axis.
   if (requested === 'model') {
-    return new ModelExecutor(modelExecEnabled);
+    return new ModelExecutor(modelExecEnabled, resolveCredential);
   }
   if (requested === 'local-process' || requested === 'trusted-dev') {
     return new LocalProcessExecutor(local);
@@ -254,7 +283,10 @@ export function selectExecutor(
 export class ModelExecutor implements Executor {
   readonly backend = 'local-process' as const;
 
-  constructor(private readonly enabled: boolean) {}
+  constructor(
+    private readonly enabled: boolean,
+    private readonly resolveCredential?: CredentialResolver,
+  ) {}
 
   unavailableReason(): string | null {
     if (!this.enabled) {
@@ -263,7 +295,11 @@ export class ModelExecutor implements Executor {
     return null;
   }
 
-  async execute(runId: string, manifest: Record<string, unknown>): Promise<ExecutionResult> {
+  async execute(
+    runId: string,
+    manifest: Record<string, unknown>,
+    run?: RunContext,
+  ): Promise<ExecutionResult> {
     const blocked = this.unavailableReason();
     if (blocked) return { outcome: 'failed', reason: blocked, events: [] };
 
@@ -293,7 +329,37 @@ export class ModelExecutor implements Executor {
       return { outcome: 'failed', reason, events };
     }
 
-    const config = resolveConfig(providerId);
+    let config = resolveConfig(providerId);
+
+    // A run may name a stored credential. Without this the encrypted store
+    // would exist while every run still read the process environment, which
+    // is the kind of gap that looks configured and is not.
+    const credentialId = run?.credentialId;
+    if (credentialId) {
+      if (!this.resolveCredential) {
+        const reason =
+          `Run names provider credential "${credentialId}", but this worker was started ` +
+          'without access to the credential store.';
+        events.push({ action: 'execution.failed', payload: { reason, credentialId } });
+        return { outcome: 'failed', reason, events };
+      }
+      let revealed;
+      try {
+        revealed = await this.resolveCredential(run.tenantId, credentialId);
+      } catch (e) {
+        const reason = (e as Error).message;
+        events.push({ action: 'execution.failed', payload: { reason, credentialId } });
+        return { outcome: 'failed', reason, events };
+      }
+      if (!revealed) {
+        const reason = `Provider credential "${credentialId}" was not found for this tenant.`;
+        events.push({ action: 'execution.failed', payload: { reason, credentialId } });
+        return { outcome: 'failed', reason, events };
+      }
+      // Merged, never logged. The audit event below records the credential id.
+      config = { ...config, ...revealed };
+    }
+
     const sampling = model?.sampling ?? {};
 
     events.push({
@@ -304,6 +370,8 @@ export class ModelExecutor implements Executor {
         // Safe configuration only. The credential is never recorded.
         sampling,
         ...(config.baseUrl ? { baseUrl: config.baseUrl } : {}),
+        // Which credential was used, never the credential.
+        ...(credentialId ? { credentialId } : {}),
       },
     });
 

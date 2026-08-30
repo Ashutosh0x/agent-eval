@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Info,
   KeyRound,
+  Plug,
   Settings as SettingsIcon,
   ShieldCheck,
   SunMoon,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 import { NavLink, Route, Routes } from 'react-router-dom';
 import { ApiKeysPage } from './ApiKeys';
+import { ProvidersPage } from './Providers';
 import { EndpointReference } from './EndpointReference';
 import { useIdentity } from '../lib/identity';
 import type { ThemeChoice } from '../lib/theme';
@@ -29,6 +31,7 @@ const SECTIONS = [
   { to: '/settings', end: true, label: 'General', Icon: SettingsIcon },
   { to: '/settings/appearance', label: 'Appearance', Icon: SunMoon },
   { to: '/settings/api-keys', label: 'API keys', Icon: KeyRound },
+  { to: '/settings/providers', label: 'Providers', Icon: Plug },
   { to: '/settings/security', label: 'Security', Icon: ShieldCheck },
   { to: '/settings/tenant', label: 'Tenant', Icon: Building2 },
   { to: '/settings/developer', label: 'Developer API', Icon: Code2 },
@@ -83,6 +86,7 @@ export function SettingsPage({
               element={<Appearance theme={theme} onChange={onThemeChange} />}
             />
             <Route path="api-keys" element={<ApiKeysPage />} />
+            <Route path="providers" element={<ProvidersPage />} />
             <Route path="security" element={<Security />} />
             <Route path="tenant" element={<Tenant />} />
             <Route path="developer" element={<Developer />} />

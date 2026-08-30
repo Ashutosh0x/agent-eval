@@ -73,10 +73,15 @@ export interface ApiKeyRecord {
   scopes: Scope[];
   hashedSecret: string;
   createdAt: Date;
+  /** Optional. Null means the key does not expire on its own. */
+  expiresAt?: Date;
   revokedAt?: Date;
   revokedBy?: string;
   lastUsedAt?: Date;
 }
+
+/** Why a presented key was refused. The caller sees a reason, not just a no. */
+export type AuthFailure = 'unknown' | 'revoked' | 'expired';
 
 /** What a read path is allowed to return. Note the absence of hashedSecret. */
 export type ApiKeyPublic = Omit<ApiKeyRecord, 'hashedSecret'>;
@@ -108,6 +113,8 @@ export interface CreateApiKeyInput {
   name: string;
   description?: string;
   scopes: Scope[];
+  /** Days until expiry. Omitted means no expiry. */
+  expiresInDays?: number;
 }
 
 export class ApiKeyError extends Error {
@@ -127,8 +134,16 @@ export interface ApiKeyStore {
   list(tenantId: string): Promise<ApiKeyPublic[]>;
   get(tenantId: string, id: string): Promise<ApiKeyPublic | null>;
   revoke(tenantId: string, id: string, revokedBy: string): Promise<ApiKeyPublic | null>;
-  /** Resolve a presented secret. Returns null for unknown or revoked keys. */
-  authenticate(secret: string): Promise<ApiKeyRecord | null>;
+  /**
+   * Resolve a presented secret.
+   *
+   * Returns a reason on failure rather than a bare null: "expired" and
+   * "revoked" need different responses from the caller, and an operator
+   * debugging a broken integration needs to know which happened.
+   */
+  authenticate(
+    secret: string,
+  ): Promise<{ ok: true; key: ApiKeyRecord } | { ok: false; reason: AuthFailure }>;
 }
 
 let counter = 0;
@@ -161,6 +176,10 @@ export class InMemoryApiKeyStore implements ApiKeyStore {
       );
     }
 
+    if (input.expiresInDays !== undefined && input.expiresInDays <= 0) {
+      throw new ApiKeyError('expiresInDays must be positive');
+    }
+
     const { secret, last4, masked } = generateSecret();
     const record: ApiKeyRecord = {
       id: newId(),
@@ -173,6 +192,9 @@ export class InMemoryApiKeyStore implements ApiKeyStore {
       scopes: [...input.scopes],
       hashedSecret: hashSecret(secret),
       createdAt: new Date(),
+      ...(input.expiresInDays !== undefined
+        ? { expiresAt: new Date(Date.now() + input.expiresInDays * 86_400_000) }
+        : {}),
     };
     this.keys.set(record.id, record);
 
@@ -202,16 +224,28 @@ export class InMemoryApiKeyStore implements ApiKeyStore {
     return toPublic(updated);
   }
 
-  async authenticate(secret: string): Promise<ApiKeyRecord | null> {
-    if (!secret.startsWith(KEY_PREFIX)) return null;
+  async authenticate(
+    secret: string,
+  ): Promise<{ ok: true; key: ApiKeyRecord } | { ok: false; reason: AuthFailure }> {
+    if (!secret.startsWith(KEY_PREFIX)) return { ok: false, reason: 'unknown' };
+
     for (const record of this.keys.values()) {
-      if (record.revokedAt) continue;
-      if (secretMatches(secret, record.hashedSecret)) {
-        const touched = { ...record, lastUsedAt: new Date() };
-        this.keys.set(record.id, touched);
-        return touched;
+      // Compare against every key including revoked ones, so a revoked key
+      // gets "revoked" rather than "unknown" — and so the loop takes the same
+      // shape either way.
+      if (!secretMatches(secret, record.hashedSecret)) continue;
+
+      if (record.revokedAt) return { ok: false, reason: 'revoked' };
+      if (record.expiresAt && record.expiresAt.getTime() <= Date.now()) {
+        return { ok: false, reason: 'expired' };
       }
+
+      // Only a successful authentication updates lastUsedAt. Failed attempts
+      // must not, or the field records attacks as activity.
+      const touched = { ...record, lastUsedAt: new Date() };
+      this.keys.set(record.id, touched);
+      return { ok: true, key: touched };
     }
-    return null;
+    return { ok: false, reason: 'unknown' };
   }
 }

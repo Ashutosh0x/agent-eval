@@ -22,7 +22,7 @@ import {
   xaiProvider,
 } from './openai-compatible.js';
 import { ollamaProvider } from './ollama.js';
-import { ProviderError, type ModelProvider, type ProviderConfig } from './types.js';
+import { ProviderError, type ModelProvider, type ProviderConfig, type Support } from './types.js';
 
 export class ProviderRegistry {
   private providers = new Map<string, ModelProvider>();
@@ -64,6 +64,8 @@ export class ProviderRegistry {
     displayName: string;
     requiresApiKey: boolean;
     supportsModelListing: boolean;
+    /** 'unknown' is distinct from 'unsupported' and is preserved here. */
+    modelListing: Support;
     capabilities: ReturnType<ModelProvider['capabilities']>;
     credentialConfigured: boolean;
   }[] {
@@ -73,7 +75,13 @@ export class ProviderRegistry {
         id: p.id,
         displayName: p.displayName,
         requiresApiKey: caps.requiresApiKey,
-        supportsModelListing: caps.modelListing === 'supported' && typeof p.listModels === 'function',
+        // 'unknown' means the provider might list models and we have not
+        // established it either way, so the honest answer is to let a caller
+        // try -- a failed probe is itself information. Collapsing unknown into
+        // false made the catalogue say "no listing API" while the endpoint
+        // went ahead and called one, and the two disagreed in the UI.
+        supportsModelListing: caps.modelListing !== 'unsupported' && typeof p.listModels === 'function',
+        modelListing: caps.modelListing,
         capabilities: caps,
         credentialConfigured: !caps.requiresApiKey || Boolean(resolveConfig(p.id).apiKey),
       };

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { FileBadge, Link2, Unlink } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { StatusBadge } from './RunDetail';
+import { StartRunForm } from './StartRun';
 import { Digest } from '../components/Digest';
 import { Seal, type SealState } from '../components/Seal';
 import { ApiError, api, type AuditEntry, type RunRecord } from '../lib/api';
@@ -30,6 +31,7 @@ export function Runs({ onBundle }: { onBundle: (bundleId: string) => void }) {
   const [runs, setRuns] = useState<RunRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
 
   const load = useCallback(() => {
     api.runs
@@ -39,31 +41,6 @@ export function Runs({ onBundle }: { onBundle: (bundleId: string) => void }) {
   }, []);
 
   useEffect(load, [load]);
-
-  async function seed() {
-    setBusy('seed');
-    try {
-      await api.runs.start({
-        environmentId: 'ghcr.io/acme/swe-env',
-        environmentDigest: 'sha256:' + '3f'.repeat(32),
-        taskSetId: 'swe-bench-verified',
-        taskSetVersion: '2026.01',
-        split: 'held-out',
-        verifierId: 'pytest',
-        verifierVersion: '3.1.0',
-        model: { identifier: 'anthropic/claude-sonnet-4-5', sampling: { temperature: 0 } },
-        seed: 42,
-        isolationBackend: 'firecracker',
-        toolchain: { 'agent-eval': '1.0.0', 'inspect-ai': '0.3.0' },
-        retentionRules: ['eu-ai-act-art-19', 'hipaa-164-316'],
-      });
-      load();
-    } catch (e) {
-      setError(describe(e, 'runs:write'));
-    } finally {
-      setBusy(null);
-    }
-  }
 
   async function bundle(runId: string) {
     setBusy(runId);
@@ -87,11 +64,11 @@ export function Runs({ onBundle }: { onBundle: (bundleId: string) => void }) {
         {can('runs:write') ? (
           <button
             type="button"
-            onClick={seed}
-            disabled={busy === 'seed'}
+            onClick={() => setStarting((v) => !v)}
+            aria-expanded={starting}
             className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm"
           >
-            {busy === 'seed' ? 'Starting…' : 'Start a run'}
+            {starting ? 'Close' : 'Start a run'}
           </button>
         ) : (
           <p className="text-xs text-[var(--text-muted)]">
@@ -99,6 +76,17 @@ export function Runs({ onBundle }: { onBundle: (bundleId: string) => void }) {
           </p>
         )}
       </div>
+
+      {starting ? (
+        <StartRunForm
+          onStarted={(runId) => {
+            setStarting(false);
+            load();
+            navigate(`/runs/${runId}`);
+          }}
+          onCancel={() => setStarting(false)}
+        />
+      ) : null}
 
       {error ? <VerificationCallout message={error} /> : null}
 

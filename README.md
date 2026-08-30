@@ -25,6 +25,15 @@ produced them.
 
 ---
 
+## Demo
+
+<video src="https://raw.githubusercontent.com/Ashutosh0x/agent-eval/main/docs/media/agent-eval-demo.mp4" controls muted playsinline width="100%"></video>
+
+If the player above does not appear in your client, the file is at
+[`docs/media/agent-eval-demo.mp4`](docs/media/agent-eval-demo.mp4).
+
+---
+
 ## The claim, and how to check it
 
 An evidence bundle is verifiable with `node:crypto` and nothing else. Edit one
@@ -246,8 +255,20 @@ mostly assertions of absence: a credential store is defined by its leaks.
 
 ## Documentation
 
+The dashboard ships a searchable documentation site at **`/docs`** covering
+setup, every configuration variable, providers and credentials, the run
+manifest, evidence verification, use cases and troubleshooting. Search indexes
+prose, code samples and table cells; press `/` to focus it.
+
+```bash
+pnpm dev            # then open http://localhost:5173/docs
+```
+
+The same material, as files:
+
 | | |
 | --- | --- |
+| [Providers and credentials](docs/providers.md) | The nine providers, credential encryption, where a secret does and does not travel |
 | [API and run flow](docs/api.md) | Every endpoint, the flow, and what is deliberately absent |
 | [Design system](docs/design-system.md) | Tokens with measured contrast, icons, accessibility |
 

@@ -25,6 +25,7 @@ export {
   GENESIS_HASH,
   entryDigest,
   verifyChain,
+  verifyEntrySlice,
   type AuditEntry,
   type AuditEventInput,
   type ChainVerification,

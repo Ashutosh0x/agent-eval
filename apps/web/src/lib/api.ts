@@ -179,6 +179,80 @@ export interface ApprovalRecord {
 
 // ---------------------------------------------------------------- endpoints
 
+
+// ------------------------------------------------------------------ providers
+
+/**
+ * Note what is absent: there is no model list in this file, and no hardcoded
+ * provider catalogue. Both come from the server, which gets them from the
+ * providers themselves. A list shipped in the frontend would be wrong within
+ * days of any provider release, and would be wrong silently.
+ */
+export interface ProviderCapabilities {
+  streaming: Support;
+  tools: Support;
+  jsonMode: Support;
+  vision: Support;
+  systemPrompt: Support;
+  logprobs: Support;
+  reasoningEffort: Support;
+}
+
+/** 'unknown' is a real answer: the provider does not say, so neither do we. */
+export type Support = 'supported' | 'unsupported' | 'unknown';
+
+export interface ProviderCredential {
+  id: string;
+  providerId: string;
+  name: string;
+  /** Enough to recognise the key. Never enough to use it. */
+  masked: string;
+  baseUrl?: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  revokedAt?: string;
+}
+
+export interface ProviderSummary {
+  id: string;
+  displayName: string;
+  requiresApiKey: boolean;
+  /** True when listing is worth attempting -- 'unknown' counts, since a failed probe is information. */
+  supportsModelListing: boolean;
+  /** The provider's own claim, with 'unknown' preserved rather than folded into false. */
+  modelListing: Support;
+  capabilities: ProviderCapabilities;
+  /** From stored credentials or environment, never asserted. */
+  credentialConfigured: boolean;
+  credentials: Pick<ProviderCredential, 'id' | 'name' | 'masked' | 'lastUsedAt'>[];
+}
+
+/**
+ * The outcome of a real request. There is deliberately no default value: a
+ * provider that has not been tested has no status, rather than a green one.
+ */
+export type ConnectionStatus =
+  | { status: 'connected'; detail?: string; modelCount?: number }
+  | { status: 'not_configured'; detail: string }
+  | { status: 'authentication_failed'; detail: string }
+  | { status: 'unavailable'; detail: string }
+  | { status: 'error'; detail: string };
+
+export interface ModelInfo {
+  id: string;
+  displayName?: string;
+  provider: string;
+  contextLength?: number;
+}
+
+export interface ModelListing {
+  items: ModelInfo[];
+  /** False where the provider exposes no enumeration API at all. */
+  listingSupported: boolean;
+  fetchedAt?: string;
+  note?: string;
+}
+
 export const api = {
   discovery: () => request<Record<string, unknown>>('/v1'),
 
@@ -220,12 +294,50 @@ export const api = {
     list: () => request<{ items: ApiKey[] }>('/v1/api-keys'),
     get: (id: string) => request<ApiKey>(`/v1/api-keys/${id}`),
     // The only call that ever receives a plaintext secret.
-    create: (name: string, scopes: string[], description?: string) =>
+    create: (name: string, scopes: string[], description?: string, expiresInDays?: number) =>
       request<{ key: ApiKey; secret: string }>('/v1/api-keys', {
         method: 'POST',
-        body: JSON.stringify({ name, scopes, ...(description ? { description } : {}) }),
+        body: JSON.stringify({
+          name,
+          scopes,
+          ...(description ? { description } : {}),
+          ...(expiresInDays ? { expiresInDays } : {}),
+        }),
       }),
     revoke: (id: string) => request<ApiKey>(`/v1/api-keys/${id}/revoke`, { method: 'POST' }),
+  },
+
+  providers: {
+    list: () =>
+      request<{ encryptionConfigured: boolean; items: ProviderSummary[] }>('/v1/providers'),
+    /** Performs an actual request. Slow on purpose; the result is real. */
+    test: (providerId: string, credentialId?: string) =>
+      request<ConnectionStatus>('/v1/providers/test', {
+        method: 'POST',
+        body: JSON.stringify({ providerId, ...(credentialId ? { credentialId } : {}) }),
+      }),
+    models: (providerId: string, credentialId?: string) =>
+      request<ModelListing>(
+        `/v1/providers/${encodeURIComponent(providerId)}/models${
+          credentialId ? `?credentialId=${encodeURIComponent(credentialId)}` : ''
+        }`,
+      ),
+  },
+
+  /**
+   * Provider credentials. Note there is no `get` that returns a secret and no
+   * reveal method — the API has no such route, so the client cannot have one
+   * even by accident.
+   */
+  credentials: {
+    list: () => request<{ items: ProviderCredential[] }>('/v1/provider-credentials'),
+    create: (body: { providerId: string; name: string; apiKey?: string; baseUrl?: string }) =>
+      request<ProviderCredential>('/v1/provider-credentials', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    revoke: (id: string) =>
+      request<ProviderCredential>(`/v1/provider-credentials/${id}/revoke`, { method: 'POST' }),
   },
 
   audit: {
