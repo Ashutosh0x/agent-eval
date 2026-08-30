@@ -252,6 +252,102 @@ mostly assertions of absence: a credential store is defined by its leaks.
 
 ---
 
+## Deployment
+
+**Live:** https://agent-eval-orpin.vercel.app
+
+Vercel hosts the web experience. It does not host the control plane, and that
+split is architectural rather than a staging step.
+
+```
+Vercel (static)              Your infrastructure
+┌──────────────────┐         ┌────────────────────────────┐
+│ React dashboard  │  /v1 →  │ Fastify control plane      │
+│ Landing + docs   │         │ Run worker (long-running)  │
+└──────────────────┘         │ Provider adapters          │
+                             │ Audit log + evidence       │
+                             └────────────────────────────┘
+```
+
+### Why the API is not on Vercel
+
+Four properties of the control plane are incompatible with serverless
+functions, and none of them are worth breaking to fit:
+
+| | |
+| --- | --- |
+| **Long-running worker** | `RunWorker` polls a queue every 500 ms and executes runs that outlive a request. A function that ends when its response is sent cannot host it. |
+| **In-process state** | Runs, the audit log and its Merkle tree are in-memory. Separate function invocations would each hold a different chain. |
+| **Subprocess execution** | `local-process` runs spawn child processes. |
+| **Host probes** | `/v1/system/*` shells out to `nvidia-smi`, `docker` and `nvcc`, and reports the machine it runs on. That is meaningless on ephemeral infrastructure. |
+
+Run the control plane on a VM, container host or DGX Spark — anywhere with a
+persistent process. See [DGX Spark deployment](docs/dgx-spark.md).
+
+### Frontend deployment
+
+```bash
+pnpm install
+pnpm --filter @agent-eval/web typecheck   # tsc --noEmit
+pnpm --filter @agent-eval/web test        # vitest
+pnpm --filter @agent-eval/web build       # tsc && vite build
+
+cd apps/web
+vercel login
+vercel link --project agent-eval
+vercel build --yes                        # reproduces the Vercel build locally
+vercel deploy --prebuilt                  # preview
+vercel deploy --prebuilt --prod           # production
+```
+
+| Setting | Value |
+| --- | --- |
+| Root directory | `apps/web` |
+| Framework preset | Vite (detected) |
+| Build command | `pnpm build` → `tsc && vite build` |
+| Output directory | `dist` |
+| Config | [`apps/web/vercel.json`](apps/web/vercel.json) — SPA rewrites and security headers only |
+
+`apps/web` has no `workspace:*` dependencies, so it installs and builds
+standalone; the deploy does not need the rest of the monorepo.
+
+### Environment variables
+
+Exactly one is needed by the frontend, and it is public by definition:
+
+```
+VITE_API_BASE_URL=https://your-control-plane.example.com
+```
+
+Everything prefixed `VITE_` is compiled into the browser bundle and readable by
+any visitor. Provider keys, `AGENT_EVAL_ENCRYPTION_KEY` and any database
+credential stay on the server; there is no path by which the browser receives
+one. See [`.env.example`](.env.example) for the full split.
+
+Set it per environment, so a preview cannot write to production data:
+
+```bash
+vercel env add VITE_API_BASE_URL production
+vercel env add VITE_API_BASE_URL preview
+```
+
+### What works without a control plane
+
+The landing page and the whole documentation site are static and fully
+functional as deployed. Dashboard routes load and then report that the API is
+unreachable — which is the correct behaviour, not a bug to paper over.
+
+### Troubleshooting
+
+| Symptom | Cause |
+| --- | --- |
+| Every route 302s to `vercel.com/sso-api` | Deployment Protection is on. Preview deployments have it by default; disable per-project if previews should be public. |
+| Dashboard loads, all API calls fail | `VITE_API_BASE_URL` unset, or the control plane is not reachable from the browser. |
+| Refresh on `/runs` 404s | The SPA rewrite in `vercel.json` is missing or was overridden. |
+| CORS errors on API calls | The control plane must allow the Vercel origin. It is a separate origin from the frontend. |
+
+---
+
 ## Local compute: NVIDIA DGX Spark
 
 agent-eval turns local AI compute into a verifiable evaluation environment.

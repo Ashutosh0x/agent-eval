@@ -14,3 +14,6 @@ build/
 coverage/
 .DS_Store
 spec.tmp.json
+
+# Vercel CLI link state: contains project and org identifiers.
+.vercel

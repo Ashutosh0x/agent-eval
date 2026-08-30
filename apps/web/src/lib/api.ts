@@ -39,9 +39,23 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Where the control plane lives.
+ *
+ * Empty in development, where Vite proxies /v1 to localhost:8080. In a
+ * deployed build there is no proxy, so the origin has to come from
+ * configuration — and it is a VITE_ variable precisely because it is public:
+ * the API base URL is visible in every network request the browser makes
+ * anyway. Nothing secret may ever be added here.
+ *
+ * A trailing slash is stripped so `${BASE}/v1/runs` cannot become a double
+ * slash, which some proxies treat as a different path.
+ */
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const res = await fetch(path, {
+  const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
