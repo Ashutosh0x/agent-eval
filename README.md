@@ -21,19 +21,67 @@ inside an isolation boundary and emits **tamper-evident, retention-compliant
 evidence bundles** that a reviewer can verify without trusting the server that
 produced them.
 
+<!-- Grouped by role rather than piled into one row, so the list says something
+     about the architecture instead of only listing dependencies. Every badge
+     below corresponds to something actually in package.json or the build —
+     nothing aspirational. -->
+
+**Control plane**
+
 <p>
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white">
   <img alt="Fastify" src="https://img.shields.io/badge/Fastify-000000?style=flat-square&logo=fastify&logoColor=white">
+  <img alt="Zod" src="https://img.shields.io/badge/Zod-3E67B1?style=flat-square&logo=zod&logoColor=white">
+  <img alt="OpenAPI" src="https://img.shields.io/badge/OpenAPI_3.1-6BA539?style=flat-square&logo=openapiinitiative&logoColor=white">
+</p>
+
+**Policy and evidence**
+
+<p>
+  <img alt="Open Policy Agent" src="https://img.shields.io/badge/OPA_Rego-7D9199?style=flat-square&logo=openpolicyagent&logoColor=white">
+  <img alt="WebAssembly" src="https://img.shields.io/badge/WebAssembly-654FF0?style=flat-square&logo=webassembly&logoColor=white">
+  <img alt="Ed25519" src="https://img.shields.io/badge/Ed25519-1F6F4A?style=flat-square">
+  <img alt="RFC 6962 Merkle" src="https://img.shields.io/badge/RFC_6962_Merkle-1F6F4A?style=flat-square">
+  <img alt="RFC 8785 JCS" src="https://img.shields.io/badge/RFC_8785_JCS-1F6F4A?style=flat-square">
+</p>
+
+**Dashboard**
+
+<p>
   <img alt="React" src="https://img.shields.io/badge/React-087EA4?style=flat-square&logo=react&logoColor=white">
   <img alt="Vite" src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white">
   <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white">
-  <img alt="Zod" src="https://img.shields.io/badge/Zod-3E67B1?style=flat-square&logo=zod&logoColor=white">
-  <img alt="Vitest" src="https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white">
+  <img alt="React Router" src="https://img.shields.io/badge/React_Router-CA4245?style=flat-square&logo=reactrouter&logoColor=white">
+  <img alt="TanStack Query" src="https://img.shields.io/badge/TanStack_Query-FF4154?style=flat-square&logo=reactquery&logoColor=white">
+  <img alt="Recharts" src="https://img.shields.io/badge/Recharts-22B5BF?style=flat-square">
+  <img alt="Zustand" src="https://img.shields.io/badge/Zustand-433E38?style=flat-square">
+</p>
+
+**Model runtimes reachable through one adapter interface**
+
+<p>
+  <img alt="OpenAI" src="https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white">
+  <img alt="Anthropic" src="https://img.shields.io/badge/Anthropic-D97757?style=flat-square&logo=anthropic&logoColor=white">
+  <img alt="Google Gemini" src="https://img.shields.io/badge/Gemini-4285F4?style=flat-square&logo=googlegemini&logoColor=white">
+  <img alt="NVIDIA NIM" src="https://img.shields.io/badge/NVIDIA_NIM-76B900?style=flat-square&logo=nvidia&logoColor=white">
+  <img alt="vLLM" src="https://img.shields.io/badge/vLLM-FDBA12?style=flat-square">
+  <img alt="Ollama" src="https://img.shields.io/badge/Ollama-000000?style=flat-square&logo=ollama&logoColor=white">
+  <img alt="SGLang" src="https://img.shields.io/badge/SGLang-1B1B1B?style=flat-square">
+  <img alt="TGI" src="https://img.shields.io/badge/TGI-FFD21E?style=flat-square&logo=huggingface&logoColor=black">
+  <img alt="OpenRouter" src="https://img.shields.io/badge/OpenRouter-6467F2?style=flat-square">
+  <img alt="Groq" src="https://img.shields.io/badge/Groq-F55036?style=flat-square&logo=groq&logoColor=white">
+</p>
+
+**Build and verification**
+
+<p>
   <img alt="pnpm" src="https://img.shields.io/badge/pnpm-F69220?style=flat-square&logo=pnpm&logoColor=white">
   <img alt="Turborepo" src="https://img.shields.io/badge/Turborepo-EF4444?style=flat-square&logo=turborepo&logoColor=white">
-  <img alt="OpenAPI" src="https://img.shields.io/badge/OpenAPI-6BA539?style=flat-square&logo=openapiinitiative&logoColor=white">
-  <img alt="Open Policy Agent" src="https://img.shields.io/badge/OPA_Rego-7D9199?style=flat-square&logo=openpolicyagent&logoColor=white">
+  <img alt="Vitest" src="https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white">
+  <img alt="ESLint" src="https://img.shields.io/badge/ESLint-4B32C3?style=flat-square&logo=eslint&logoColor=white">
+  <img alt="Python" src="https://img.shields.io/badge/Python_verifier-3776AB?style=flat-square&logo=python&logoColor=white">
+  <img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white">
 </p>
 
 ---
@@ -330,30 +378,50 @@ an evaluation whose evidence cannot be verified independently is not evidence.
 
 ```
 agent-eval/
-├── packages/server/     Fastify control plane, evidence layer, API keys
+├── packages/server/           Fastify control plane
+│   ├── policy-bundle/         policy.wasm, compiled from policies/
 │   └── src/
-│       ├── evidence/    Merkle, audit log, signing, retention, bundles
-│       ├── auth/        API keys
-│       ├── api/         Routes and OpenAPI
-│       ├── schemas/     Zod, shared with the client
-│       └── store/       Storage seam — append-only by type
-├── apps/web/            React dashboard
-├── packages/cli/        Commander CLI
-├── packages/sdk/        TypeScript client
-├── policies/            OPA/Rego
+│       ├── evidence/          Merkle, audit log, signing, retention, bundles
+│       ├── provenance/        Model vs deployment identity, evaluation passport
+│       ├── models/            Model registry, capability negotiation, cost
+│       ├── providers/         19 model adapters behind one interface
+│       ├── policy/            In-process Rego evaluation and the tool-call gate
+│       ├── trajectories/      ATIF v1.7, content-addressed blob store
+│       ├── tasks/             Task registry and held-out split control
+│       ├── scoring/           Intervals, estimators, comparison, MRD
+│       ├── robustness/        Perturbations, canaries, fuzzing
+│       ├── auth/              API keys, encrypted provider credentials
+│       ├── api/               Routes and OpenAPI
+│       ├── schemas/           Zod, shared with the client
+│       ├── store/             Storage seam — append-only by type
+│       ├── worker/            Run claiming and execution
+│       └── system/            Host and accelerator detection
+├── apps/web/                  React dashboard
+├── packages/cli/              Commander CLI
+├── packages/sdk/              TypeScript client
+├── policies/                  OPA/Rego sources
+├── conformance/               Frozen vectors + independent Python verifier
 └── docs/
 ```
 
-`AuditStore` has no `update` or `delete` method. Not by convention — by type,
-so no route can mutate history even by accident.
+Three invariants are enforced by the type system rather than by review:
+
+- `AuditStore` has no `update` or `delete` method, so no route can mutate
+  history even by accident.
+- `IssuePassportInput` has no `provenanceClass` field, so a caller cannot
+  declare its own result independently verified.
+- A registered model's capabilities default to `unknown`, never `supported`, so
+  an unprobed model is excluded from a benchmark rather than silently run
+  against requirements it may not meet.
 
 ---
 
 ## Tests
 
 ```bash
-pnpm --filter @agent-eval/server test    # 152
-pnpm --filter @agent-eval/web test       #  14
+pnpm --filter @agent-eval/server test    # 690
+pnpm --filter @agent-eval/web test       #  70
+python conformance/verify.py             #  26 checks, no Node.js involved
 ```
 
 The Merkle suite generates roughly 1,100 proofs across every tree size and leaf
