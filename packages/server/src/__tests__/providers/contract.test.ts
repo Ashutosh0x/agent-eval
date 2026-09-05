@@ -23,15 +23,18 @@ import {
 } from '../../providers/local-runtimes.js';
 import { ollamaProvider } from '../../providers/ollama.js';
 import {
+  dashscopeProvider,
   deepseekProvider,
   fireworksProvider,
   groqProvider,
   mistralProvider,
   openaiCompatibleProvider,
+  moonshotProvider,
   openaiProvider,
   openrouterProvider,
   togetherProvider,
   xaiProvider,
+  zaiProvider,
   minimaxProvider,
 } from '../../providers/openai-compatible.js';
 import { ProviderRegistry, providerRegistry, resolveConfig } from '../../providers/registry.js';
@@ -45,6 +48,9 @@ const ALL: ModelProvider[] = [
   deepseekProvider,
   mistralProvider,
   minimaxProvider,
+  moonshotProvider,
+  zaiProvider,
+  dashscopeProvider,
   // Gateways. A broker speaking this dialect must satisfy the same contract as
   // a first-party vendor, or "adding a provider is only a registration" is not
   // actually true.

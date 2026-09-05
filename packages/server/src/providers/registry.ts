@@ -14,16 +14,19 @@
 import { anthropicProvider } from './anthropic.js';
 import { googleProvider } from './google.js';
 import {
+  dashscopeProvider,
   deepseekProvider,
   fireworksProvider,
   groqProvider,
   minimaxProvider,
   mistralProvider,
+  moonshotProvider,
   openaiCompatibleProvider,
   openaiProvider,
   openrouterProvider,
   togetherProvider,
   xaiProvider,
+  zaiProvider,
 } from './openai-compatible.js';
 import {
   lmStudioProvider,
@@ -116,6 +119,9 @@ const ENV_KEYS: Record<string, string> = {
   deepseek: 'DEEPSEEK_API_KEY',
   mistral: 'MISTRAL_API_KEY',
   minimax: 'MINIMAX_API_KEY',
+  moonshot: 'MOONSHOT_API_KEY',
+  zai: 'ZAI_API_KEY',
+  dashscope: 'DASHSCOPE_API_KEY',
   'openai-compatible': 'OPENAI_COMPATIBLE_API_KEY',
 };
 
@@ -151,6 +157,9 @@ export const providerRegistry = new ProviderRegistry()
   .register(deepseekProvider)
   .register(mistralProvider)
   .register(minimaxProvider)
+  .register(moonshotProvider)
+  .register(zaiProvider)
+  .register(dashscopeProvider)
   // Gateways. A broker that speaks this dialect is an ordinary provider here;
   // nothing downstream needs to know a request was brokered.
   .register(openrouterProvider)

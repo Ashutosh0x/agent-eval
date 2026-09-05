@@ -375,3 +375,55 @@ export const fireworksProvider = new OpenAICompatibleProvider({
   defaultBaseUrl: 'https://api.fireworks.ai/inference/v1',
   capabilities: unknownVision,
 });
+
+/**
+ * Moonshot AI, which serves the Kimi family.
+ *
+ * Base URL verified against Moonshot's own quickstart: api.moonshot.ai/v1,
+ * a drop-in Chat Completions surface. An Anthropic-shaped endpoint also exists
+ * at /anthropic, which is deliberately NOT wired here — the OpenAI surface is
+ * the one this adapter speaks, and offering two paths to one vendor would mean
+ * two sets of behaviour to keep in step for no gain.
+ */
+export const moonshotProvider = new OpenAICompatibleProvider({
+  id: 'moonshot',
+  displayName: 'Moonshot AI (Kimi)',
+  defaultBaseUrl: 'https://api.moonshot.ai/v1',
+  capabilities: unknownVision,
+});
+
+/**
+ * Z.ai / Zhipu, which serves the GLM family.
+ *
+ * NOTE THE PATH. The base URL is `/api/paas/v4`, not `/v1` — this vendor does
+ * not use the conventional suffix. That matters because clients which assume
+ * `/v1` and append it produce a 404 that reads like a bad key rather than a
+ * bad path. This adapter appends only `/chat/completions` and `/models` to
+ * whatever base URL it is given, so the vendor's own path survives intact.
+ *
+ * The mainland endpoint is open.bigmodel.cn/api/paas/v4 and coding-plan keys
+ * use a different path again; both are reachable by overriding baseUrl rather
+ * than by adding more registrations.
+ */
+export const zaiProvider = new OpenAICompatibleProvider({
+  id: 'zai',
+  displayName: 'Z.ai (GLM)',
+  defaultBaseUrl: 'https://api.z.ai/api/paas/v4',
+  capabilities: unknownVision,
+});
+
+/**
+ * Alibaba Model Studio (DashScope), which serves the Qwen family.
+ *
+ * Defaults to the international endpoint. A US endpoint exists at
+ * dashscope-us and the mainland one at dashscope.aliyuncs.com; both are a
+ * baseUrl override. Picking the international default rather than the mainland
+ * one is a guess about where a given operator sits, which is why it is only a
+ * default and never a constraint.
+ */
+export const dashscopeProvider = new OpenAICompatibleProvider({
+  id: 'dashscope',
+  displayName: 'Alibaba Model Studio (Qwen)',
+  defaultBaseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+  capabilities: unknownVision,
+});

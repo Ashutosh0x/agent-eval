@@ -74,6 +74,10 @@ produced them.
   <img alt="Ollama" src="https://img.shields.io/badge/Ollama-000000?style=flat-square&logo=ollama&logoColor=white">
   <img alt="SGLang" src="https://img.shields.io/badge/SGLang-1B1B1B?style=flat-square">
   <img alt="TGI" src="https://img.shields.io/badge/TGI-FFD21E?style=flat-square&logo=huggingface&logoColor=black">
+  <img alt="Kimi" src="https://img.shields.io/badge/Moonshot_Kimi-000000?style=flat-square">
+  <img alt="GLM" src="https://img.shields.io/badge/Z.ai_GLM-3859FF?style=flat-square">
+  <img alt="Qwen" src="https://img.shields.io/badge/Qwen-615CED?style=flat-square&logo=alibabacloud&logoColor=white">
+  <img alt="DeepSeek" src="https://img.shields.io/badge/DeepSeek-4D6BFE?style=flat-square&logo=deepseek&logoColor=white">
   <img alt="OpenRouter" src="https://img.shields.io/badge/OpenRouter-6467F2?style=flat-square">
   <img alt="Groq" src="https://img.shields.io/badge/Groq-F55036?style=flat-square&logo=groq&logoColor=white">
 </p>
@@ -389,7 +393,7 @@ agent-eval/
 │       ├── evidence/          Merkle, audit log, signing, retention, bundles
 │       ├── provenance/        Model vs deployment identity, evaluation passport
 │       ├── models/            Model registry, capability negotiation, cost
-│       ├── providers/         19 model adapters behind one interface
+│       ├── providers/         22 model adapters behind one interface
 │       ├── policy/            In-process Rego evaluation and the tool-call gate
 │       ├── trajectories/      ATIF v1.7, content-addressed blob store
 │       ├── tasks/             Task registry and held-out split control
