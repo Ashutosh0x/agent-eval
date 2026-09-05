@@ -24,11 +24,16 @@ produced them.
 <!-- Grouped by role rather than piled into one row, so the list says something
      about the architecture instead of only listing dependencies. Every badge
      below corresponds to something actually in package.json or the build —
-     nothing aspirational. -->
+     nothing aspirational.
 
-**Control plane**
+     align="center" is set on EVERY element rather than once on a wrapper.
+     GitHub sanitises README HTML and does not reliably inherit alignment into
+     children, so a single wrapping div centres the block on some surfaces and
+     not others. Explicit is dull to read and renders the same everywhere. -->
 
-<p>
+<p align="center"><strong>Control plane</strong></p>
+
+<p align="center">
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white">
   <img alt="Fastify" src="https://img.shields.io/badge/Fastify-000000?style=flat-square&logo=fastify&logoColor=white">
@@ -36,9 +41,9 @@ produced them.
   <img alt="OpenAPI" src="https://img.shields.io/badge/OpenAPI_3.1-6BA539?style=flat-square&logo=openapiinitiative&logoColor=white">
 </p>
 
-**Policy and evidence**
+<p align="center"><strong>Policy and evidence</strong></p>
 
-<p>
+<p align="center">
   <img alt="Open Policy Agent" src="https://img.shields.io/badge/OPA_Rego-7D9199?style=flat-square&logo=openpolicyagent&logoColor=white">
   <img alt="WebAssembly" src="https://img.shields.io/badge/WebAssembly-654FF0?style=flat-square&logo=webassembly&logoColor=white">
   <img alt="Ed25519" src="https://img.shields.io/badge/Ed25519-1F6F4A?style=flat-square">
@@ -46,9 +51,9 @@ produced them.
   <img alt="RFC 8785 JCS" src="https://img.shields.io/badge/RFC_8785_JCS-1F6F4A?style=flat-square">
 </p>
 
-**Dashboard**
+<p align="center"><strong>Dashboard</strong></p>
 
-<p>
+<p align="center">
   <img alt="React" src="https://img.shields.io/badge/React-087EA4?style=flat-square&logo=react&logoColor=white">
   <img alt="Vite" src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white">
   <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white">
@@ -58,9 +63,9 @@ produced them.
   <img alt="Zustand" src="https://img.shields.io/badge/Zustand-433E38?style=flat-square">
 </p>
 
-**Model runtimes reachable through one adapter interface**
+<p align="center"><strong>Model runtimes reachable through one adapter interface</strong></p>
 
-<p>
+<p align="center">
   <img alt="OpenAI" src="https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white">
   <img alt="Anthropic" src="https://img.shields.io/badge/Anthropic-D97757?style=flat-square&logo=anthropic&logoColor=white">
   <img alt="Google Gemini" src="https://img.shields.io/badge/Gemini-4285F4?style=flat-square&logo=googlegemini&logoColor=white">
@@ -73,9 +78,9 @@ produced them.
   <img alt="Groq" src="https://img.shields.io/badge/Groq-F55036?style=flat-square&logo=groq&logoColor=white">
 </p>
 
-**Build and verification**
+<p align="center"><strong>Build and verification</strong></p>
 
-<p>
+<p align="center">
   <img alt="pnpm" src="https://img.shields.io/badge/pnpm-F69220?style=flat-square&logo=pnpm&logoColor=white">
   <img alt="Turborepo" src="https://img.shields.io/badge/Turborepo-EF4444?style=flat-square&logo=turborepo&logoColor=white">
   <img alt="Vitest" src="https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white">
