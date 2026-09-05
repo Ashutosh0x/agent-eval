@@ -16,8 +16,16 @@
       "dependsOn": ["build"],
       "outputs": ["coverage/**"]
     },
+    // dependsOn ^build, NOT ^typecheck.
+    //
+    // Typechecking a consumer needs the producer's emitted .d.ts, and only
+    // `build` emits those. With ^typecheck the SDK was type-checked but never
+    // built, so on a clean checkout @agent-eval/cli could not resolve
+    // @agent-eval/sdk at all -- and the resulting `any` produced a second,
+    // misleading implicit-any error downstream. It passed locally only because
+    // dist/ happened to survive an earlier build.
     "typecheck": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": ["^build"]
     }
   }
 }

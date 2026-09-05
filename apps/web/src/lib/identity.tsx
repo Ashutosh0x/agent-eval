@@ -11,6 +11,12 @@
  * action that would fail.
  */
 
+/* eslint-disable react-refresh/only-export-components -- 
+   A context module exports its provider AND the hook that reads it; that is
+   the canonical React pattern and splitting them would put the hook in a file
+   that cannot see the context it belongs to. The rule is about hot-reload
+   granularity, not correctness, and CI runs with --max-warnings 0. */
+
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, api, type Identity } from './api';
 

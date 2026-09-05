@@ -25,7 +25,7 @@ Object.defineProperty(window, 'matchMedia', {
  * the parts of the Storage interface the app actually uses.
  */
 function createStorage(): Storage {
-  let entries = new Map<string, string>();
+  const entries = new Map<string, string>();
   return {
     get length() {
       return entries.size;
