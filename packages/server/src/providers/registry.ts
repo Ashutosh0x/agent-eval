@@ -15,15 +15,22 @@ import { anthropicProvider } from './anthropic.js';
 import { googleProvider } from './google.js';
 import {
   deepseekProvider,
+  fireworksProvider,
+  groqProvider,
   minimaxProvider,
   mistralProvider,
   openaiCompatibleProvider,
   openaiProvider,
+  openrouterProvider,
+  togetherProvider,
   xaiProvider,
 } from './openai-compatible.js';
 import {
+  lmStudioProvider,
   nimProvider,
+  sglangProvider,
   tensorRtLlmProvider,
+  tgiProvider,
   vllmProvider,
 } from './local-runtimes.js';
 import { ollamaProvider } from './ollama.js';
@@ -144,12 +151,21 @@ export const providerRegistry = new ProviderRegistry()
   .register(deepseekProvider)
   .register(mistralProvider)
   .register(minimaxProvider)
+  // Gateways. A broker that speaks this dialect is an ordinary provider here;
+  // nothing downstream needs to know a request was brokered.
+  .register(openrouterProvider)
+  .register(togetherProvider)
+  .register(groqProvider)
+  .register(fireworksProvider)
   .register(ollamaProvider)
   // Local inference runtimes. They speak the OpenAI protocol, so they are
   // ordinary providers here rather than a separate subsystem -- the evaluator
   // resolves them from this registry like any other, and nothing downstream
   // needs to know whether a model was served from this machine or a vendor.
   .register(vllmProvider)
+  .register(sglangProvider)
+  .register(tgiProvider)
+  .register(lmStudioProvider)
   .register(tensorRtLlmProvider)
   .register(nimProvider)
   .register(openaiCompatibleProvider);

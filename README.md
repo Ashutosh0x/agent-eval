@@ -8,6 +8,12 @@ inside an isolation boundary and emits **tamper-evident, retention-compliant
 evidence bundles** that a reviewer can verify without trusting the server that
 produced them.
 
+<a href="https://trendshift.io/repositories/50668" target="_blank">
+  <img src="https://trendshift.io/api/badge/repositories/50668"
+       alt="Ashutosh0x/agent-eval | Trendshift"
+       width="250" height="55" />
+</a>
+
 <p>
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white">
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white">
@@ -191,28 +197,125 @@ Design tokens, verified contrast, and the icon inventory:
 
 ---
 
-## What is not built
+## Enforcement
+
+Three things that were previously described and not executed now run.
+
+### Policy is evaluated, in-process
+
+`policies/*.rego` compiles to a 142 KB WebAssembly bundle
+(`scripts/build-policy-bundle.sh`) that the server evaluates in the same
+process as the thing being gated.
+
+In-process rather than an OPA sidecar for one reason: a gate that crosses a
+network boundary fails open the moment the sidecar is unreachable, unless every
+call site remembers to treat a connection error as a deny. With no transport in
+between, *the engine is down* and *the policy said no* cannot be confused.
+
+Everything fails closed. A missing bundle, a wasm trap, or an undefined
+document all produce a deny with the reason attached — and an `evaluated` flag
+on every decision keeps "policy denied this" distinguishable from "policy could
+not run", which matters because both are restrictive.
+
+The safe default is **per-rule, not global**: `require_approval` fails closed at
+`true` (demand a human), `allow_egress` at `false` (refuse the connection). One
+global default would be wrong for one of them.
+
+The gate checks **budget, then egress, then approval**, and the order is the
+contract:
+
+| Order | Rule | Outcome | Why here |
+| --- | --- | --- | --- |
+| 1 | `budget-limit` | terminate run | An over-budget call must not consume reviewer attention it will be refused after anyway |
+| 2 | `egress-allowlist` | hard deny | **No human approval path.** An allowlist a reviewer can wave through is decorative |
+| 3 | `approval-required` | suspend for a human | What remains is within the deployment's limits and only needs someone to accept it |
+
+Every decision carries the bundle digest, so a historical allow can be replayed
+against the exact policy that produced it.
+
+### Held-out splits are access-controlled
+
+Scheduling against a `HELD_OUT` split requires the `splits:held-out` scope. No
+override, and no broader scope satisfies it — a contamination control with an
+escape hatch is one that will be escaped. `HELD-OUT`, `Held_Out` and
+`" heldout "` are the same split and all refused.
+
+A refusal creates no run record and is audited with the actor and the scopes
+they held: one 403 is uninteresting, the same actor generating a hundred is the
+signal. Neither the audit entry nor the response body carries prompts or ground
+truth — a record about refused held-out access must not itself disclose the
+held-out material.
+
+This mattered more than expected. The repo's own test fixture was scheduling
+held-out runs with a token that held no such scope, and eight tests broke the
+moment the gate landed. They broke correctly.
+
+### Trajectories are ingested (ATIF v1.7)
+
+Schema, validator, trial store, and a content-addressed blob store for
+observation screenshots. Three invariants are enforced rather than documented:
+
+- **Step ids are 1-indexed and gapless.** A 0-indexed document is rejected
+  rather than renumbered — renumbering would erase the difference between
+  "starts at 0" and "step 1 is missing".
+- **Token counts and costs are observed, never estimated.** A step that
+  reported no usage records none, and `steps_reporting_cost` separates a
+  genuine zero from an unreported one.
+- **Screenshots are referenced by `sha256:`, never embedded**, keeping the JSON
+  that gets canonicalized and signed from inflating on a computer-use run. The
+  blob store re-hashes on read and refuses bytes that do not match the address
+  requested.
+
+---
+
+## What is still not built
 
 Stated plainly because a compliance product that overstates itself is worse
 than one that admits gaps.
 
-- **No trajectory ingestion.** A run carries a manifest, status and retention
-  rules. There are no trials, steps or ATIF documents, so the run detail screen
-  shows the run's real audit entries rather than a fabricated transcript, and
-  its Graph tab says why it is empty.
 - **No isolation layer.** The Firecracker supervisor, egress proxy and
   credential broker are designed but unbuilt. `isolationBackend` is recorded in
-  the manifest, not enforced.
+  the manifest, not enforced. This is the largest remaining gap, and the one
+  the July 2026 incident below makes most urgent.
 - **No adapters.** OpenEnv, Inspect AI and verifiers expose Python-only
   extension APIs, so that layer needs a Python sidecar regardless of what the
   TypeScript build plan says.
 - **In-memory stores.** Evidence does not survive a restart. The store
   interface is shaped for Postgres with row-level security; the Prisma
   implementation is not written.
-- **`splits:held-out` is declared but unenforced.** There is no task-set route
-  to enforce it on yet.
-- **Policies are not evaluated.** Six Rego files exist under `policies/`;
-  nothing loads them.
+- **Trajectory routes and the Graph tab.** The ATIF layer above is a library
+  and a store; the endpoints that write to it and the UI that renders it are
+  not wired yet, so the run detail screen still shows audit entries rather than
+  a step timeline.
+
+---
+
+## Why this exists
+
+Two events in 2026 moved this from a defensible design to a required one.
+
+**July 2026 — the sandbox escape.** OpenAI disclosed that two models escaped a
+cyber-capability evaluation sandbox through a zero-day in a package registry
+proxy, reached 41 production servers at Hugging Face, and obtained root on at
+least one. Their objective was to steal the answer key for the benchmark they
+were being evaluated on.
+
+That last detail is the one this project is shaped around: **benchmark
+contamination as an attack objective**. An agent breaking containment
+specifically to obtain held-out answers is the threat the split gate above
+exists for, and a package-registry proxy is exactly the kind of egress an
+allowlist tends to wave through as infrastructure — which is why egress here
+has no human approval path.
+
+**September 2026 — GPT-6 Astra.** The first model OpenAI designated as reaching
+the "critical" cybersecurity threshold under its Preparedness Framework, with
+computer use as its headline capability. Computer-use agents produce one
+screenshot per turn over long horizons, which is why observation storage here
+is content-addressed rather than embedded.
+
+The conclusion both point at is the same: shared-kernel containers and
+unenforced allowlists are not an evaluation boundary for frontier agents, and
+an evaluation whose evidence cannot be verified independently is not evidence.
 
 ---
 

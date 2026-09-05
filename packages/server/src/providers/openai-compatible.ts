@@ -323,3 +323,55 @@ export const openaiCompatibleProvider = new OpenAICompatibleProvider({
   displayName: 'OpenAI-compatible',
   capabilities: { modelListing: 'unknown', vision: 'unknown', structuredOutput: 'unknown' },
 });
+
+/**
+ * OpenRouter — a gateway that fans out to many upstream vendors.
+ *
+ * Registered as an ordinary provider rather than a special "gateway" concept:
+ * it speaks this dialect, so nothing downstream needs to know it is a broker.
+ * Its `/models` endpoint enumerates hundreds of upstreams, which is exactly
+ * why no model list is hardcoded anywhere in this file.
+ *
+ * The two extra headers are optional attribution used for OpenRouter's own
+ * leaderboards. They carry no credential.
+ */
+export const openrouterProvider = new OpenAICompatibleProvider({
+  id: 'openrouter',
+  displayName: 'OpenRouter',
+  defaultBaseUrl: 'https://openrouter.ai/api/v1',
+  // Capability varies per upstream model, so unknown is the accurate answer
+  // for everything except the protocol-level features the gateway guarantees.
+  capabilities: { vision: 'unknown', structuredOutput: 'unknown', modelListing: 'supported' },
+  extraHeaders: () => ({
+    'HTTP-Referer': 'https://github.com/Ashutosh0x/agent-eval',
+    'X-Title': 'agent-eval',
+  }),
+});
+
+/**
+ * Together AI, Groq and Fireworks.
+ *
+ * All three serve open-weight models behind the OpenAI protocol. They are
+ * configuration, not code: adding one is a registration, which is the property
+ * the adapter architecture exists to provide.
+ */
+export const togetherProvider = new OpenAICompatibleProvider({
+  id: 'together',
+  displayName: 'Together AI',
+  defaultBaseUrl: 'https://api.together.xyz/v1',
+  capabilities: unknownVision,
+});
+
+export const groqProvider = new OpenAICompatibleProvider({
+  id: 'groq',
+  displayName: 'Groq',
+  defaultBaseUrl: 'https://api.groq.com/openai/v1',
+  capabilities: unknownVision,
+});
+
+export const fireworksProvider = new OpenAICompatibleProvider({
+  id: 'fireworks',
+  displayName: 'Fireworks AI',
+  defaultBaseUrl: 'https://api.fireworks.ai/inference/v1',
+  capabilities: unknownVision,
+});

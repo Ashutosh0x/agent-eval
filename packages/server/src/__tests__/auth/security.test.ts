@@ -372,7 +372,18 @@ describe('provider status is never asserted', () => {
       .items.filter((p: { credentialConfigured: boolean }) => p.credentialConfigured)
       .map((p: { id: string }) => p.id)
       .sort();
-    expect(configured).toEqual(['nim', 'ollama', 'tensorrt-llm', 'vllm']);
+    // Every keyless provider: the local runtimes and Ollama. A provider lands
+    // here by declaring requiresApiKey: false, so this list grows whenever a
+    // new local runtime is registered and shrinks if one starts demanding a key.
+    expect(configured).toEqual([
+      'lmstudio',
+      'nim',
+      'ollama',
+      'sglang',
+      'tensorrt-llm',
+      'tgi',
+      'vllm',
+    ]);
 
     // Every provider that does need a key is absent from that list.
     const keyed = res

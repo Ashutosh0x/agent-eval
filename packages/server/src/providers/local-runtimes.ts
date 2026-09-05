@@ -156,3 +156,61 @@ export const nimProvider = new OpenAICompatibleProvider({
     structuredOutput: 'unknown',
   },
 });
+
+/**
+ * SGLang's OpenAI-compatible server.
+ *
+ * Default port 30000, which is SGLang's own default rather than the 8000 vLLM
+ * uses — guessing the wrong one produces a connection error that reads like
+ * the server is down instead of unconfigured.
+ */
+export const sglangProvider = new OpenAICompatibleProvider({
+  id: 'sglang',
+  displayName: 'SGLang',
+  defaultBaseUrl: 'http://127.0.0.1:30000/v1',
+  capabilities: {
+    requiresApiKey: false,
+    modelListing: 'supported',
+    vision: 'unknown',
+    structuredOutput: 'unknown',
+  },
+});
+
+/**
+ * Hugging Face Text Generation Inference.
+ *
+ * TGI serves a single model per process, so `/models` returns that one entry
+ * and the model id in a request is effectively ignored. That is why the
+ * registry records the operator's declared identifier: the endpoint cannot
+ * tell you which weights it loaded in a way that distinguishes two TGI servers.
+ */
+export const tgiProvider = new OpenAICompatibleProvider({
+  id: 'tgi',
+  displayName: 'Text Generation Inference',
+  defaultBaseUrl: 'http://127.0.0.1:8080/v1',
+  capabilities: {
+    requiresApiKey: false,
+    modelListing: 'unknown',
+    vision: 'unknown',
+    structuredOutput: 'unknown',
+  },
+});
+
+/**
+ * LM Studio's local server. Default port 1234.
+ *
+ * Desktop software a user starts by hand, so the endpoint being absent is the
+ * normal state rather than an error — the connection test says "not running"
+ * rather than "misconfigured".
+ */
+export const lmStudioProvider = new OpenAICompatibleProvider({
+  id: 'lmstudio',
+  displayName: 'LM Studio',
+  defaultBaseUrl: 'http://127.0.0.1:1234/v1',
+  capabilities: {
+    requiresApiKey: false,
+    modelListing: 'supported',
+    vision: 'unknown',
+    structuredOutput: 'unknown',
+  },
+});

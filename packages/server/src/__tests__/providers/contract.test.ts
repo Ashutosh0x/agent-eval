@@ -13,13 +13,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { anthropicProvider } from '../../providers/anthropic.js';
 import { googleProvider } from '../../providers/google.js';
-import { nimProvider, tensorRtLlmProvider, vllmProvider } from '../../providers/local-runtimes.js';
+import {
+  lmStudioProvider,
+  nimProvider,
+  sglangProvider,
+  tensorRtLlmProvider,
+  tgiProvider,
+  vllmProvider,
+} from '../../providers/local-runtimes.js';
 import { ollamaProvider } from '../../providers/ollama.js';
 import {
   deepseekProvider,
+  fireworksProvider,
+  groqProvider,
   mistralProvider,
   openaiCompatibleProvider,
   openaiProvider,
+  openrouterProvider,
+  togetherProvider,
   xaiProvider,
   minimaxProvider,
 } from '../../providers/openai-compatible.js';
@@ -34,10 +45,20 @@ const ALL: ModelProvider[] = [
   deepseekProvider,
   mistralProvider,
   minimaxProvider,
+  // Gateways. A broker speaking this dialect must satisfy the same contract as
+  // a first-party vendor, or "adding a provider is only a registration" is not
+  // actually true.
+  openrouterProvider,
+  togetherProvider,
+  groqProvider,
+  fireworksProvider,
   ollamaProvider,
   // Local inference runtimes. They speak the OpenAI protocol, so they belong
   // in the same contract battery as everything else that does.
   vllmProvider,
+  sglangProvider,
+  tgiProvider,
+  lmStudioProvider,
   tensorRtLlmProvider,
   nimProvider,
   openaiCompatibleProvider,
