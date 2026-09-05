@@ -1,0 +1,144 @@
+{
+  "spec": "RFC 8785 (JSON Canonicalization Scheme)",
+  "conformance": "agent-eval is RFC 8785 conformant over the domain of valid JSON. It is STRICTER outside that domain: values RFC 8785 would serialize lossily are rejected rather than silently changed. Those cases are listed under `rejected`.",
+  "keyOrdering": "UTF-16 code units, ascending -- NOT code points, NOT locale collation",
+  "vectors": [
+    {
+      "description": "RFC 8785 section 3.2.3 worked example",
+      "rationale": "The reference case from the JCS specification. Covers key ordering, ECMAScript number formatting across five magnitudes, and the complete string escape table.",
+      "input": {
+        "numbers": [
+          333333333.3333333,
+          1e+30,
+          4.5,
+          0.002,
+          1e-27
+        ],
+        "string": "€$\u000f\nA'B\"\\\\\"/",
+        "literals": [
+          null,
+          true,
+          false
+        ]
+      },
+      "canonical": "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}"
+    },
+    {
+      "description": "keys sort by UTF-16 code unit, not insertion order",
+      "rationale": "ASCII uppercase sorts before lowercase because 0x41 < 0x61. An implementation using a locale-aware or case-insensitive comparison produces a different byte string here.",
+      "input": {
+        "1": 5,
+        "b": 1,
+        "a": 2,
+        "C": 3,
+        "A": 4
+      },
+      "canonical": "{\"1\":5,\"A\":4,\"C\":3,\"a\":2,\"b\":1}"
+    },
+    {
+      "description": "non-BMP key sorts before U+FFFF (code units, not code points)",
+      "rationale": "THE interoperability trap. U+10000 encodes as the surrogate pair D800 DC00, so under RFC 8785 UTF-16 code-unit ordering it sorts BEFORE U+FFFF. Sorting by code point -- which is what Python's sorted() does on str -- reverses these two keys and yields a different digest. Any verifier that passes this vector is doing the right comparison.",
+      "input": {
+        "𐀀": "non-BMP, surrogate pair D800 DC00",
+        "￿": "BMP maximum",
+        "a": "ascii"
+      },
+      "canonical": "{\"a\":\"ascii\",\"𐀀\":\"non-BMP, surrogate pair D800 DC00\",\"￿\":\"BMP maximum\"}"
+    },
+    {
+      "description": "Unicode is not normalized",
+      "rationale": "U+00E9 and U+0065 U+0301 both render as e-acute but are distinct keys. JCS canonicalizes JSON, not Unicode; normalizing here would silently merge two different records.",
+      "input": {
+        "é": "precomposed",
+        "é": "decomposed"
+      },
+      "canonical": "{\"é\":\"decomposed\",\"é\":\"precomposed\"}"
+    },
+    {
+      "description": "nested structures sort at every level",
+      "rationale": "Sorting only the top level is a common shortcut that passes flat test cases.",
+      "input": {
+        "z": {
+          "b": 1,
+          "a": 2
+        },
+        "a": [
+          {
+            "d": 1,
+            "c": 2
+          }
+        ]
+      },
+      "canonical": "{\"a\":[{\"c\":2,\"d\":1}],\"z\":{\"a\":2,\"b\":1}}"
+    },
+    {
+      "description": "array order is data and is never sorted",
+      "rationale": "Objects are unordered and get sorted; arrays are ordered and must not be. Sorting both is a real implementation error that only shows up on arrays of scalars.",
+      "input": {
+        "list": [
+          3,
+          1,
+          2,
+          "b",
+          "a"
+        ]
+      },
+      "canonical": "{\"list\":[3,1,2,\"b\",\"a\"]}"
+    },
+    {
+      "description": "integers at the edge of exact representation",
+      "rationale": "ECMAScript numbers are IEEE 754 doubles. 2^53 and above lose integer precision, and the canonical form must show what was actually stored rather than what was written.",
+      "input": {
+        "max": 9007199254740991,
+        "over": 9007199254740992,
+        "neg": -9007199254740991
+      },
+      "canonical": "{\"max\":9007199254740991,\"neg\":-9007199254740991,\"over\":9007199254740992}"
+    },
+    {
+      "description": "empty containers",
+      "rationale": "Trivially different from null, and easy to conflate.",
+      "input": {
+        "obj": {},
+        "arr": [],
+        "str": ""
+      },
+      "canonical": "{\"arr\":[],\"obj\":{},\"str\":\"\"}"
+    },
+    {
+      "description": "an undefined property is absent, matching JSON.stringify",
+      "rationale": "The one lossy case allowed. Rejecting it would make ordinary optional fields unusable, and every JSON serializer in the ecosystem behaves this way.",
+      "input": {
+        "a": 1,
+        "c": 3
+      },
+      "canonical": "{\"a\":1,\"c\":3}"
+    }
+  ],
+  "rejected": [
+    {
+      "description": "negative zero",
+      "rationale": "RFC 8785 serializes -0 as \"0\", so the value does not round-trip. In an audit record a silent value change is worse than a loud failure.",
+      "construct": "{ \"value\": -0 }",
+      "rejected": true
+    },
+    {
+      "description": "NaN and Infinity",
+      "rationale": "JSON.stringify emits null for both, collapsing two distinct values into a third.",
+      "construct": "{ \"value\": NaN } and { \"value\": Infinity }",
+      "rejected": true
+    },
+    {
+      "description": "BigInt",
+      "rationale": "JSON.stringify throws. Caught here with a message that says to format it as a string.",
+      "construct": "{ \"value\": 1n }",
+      "rejected": true
+    },
+    {
+      "description": "circular reference",
+      "rationale": "Would recurse until the stack ends.",
+      "construct": "const a = {}; a.self = a;",
+      "rejected": true
+    }
+  ]
+}

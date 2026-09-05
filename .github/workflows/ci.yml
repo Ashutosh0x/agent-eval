@@ -36,3 +36,19 @@ jobs:
         
       - name: Build
         run: pnpm run build
+
+  # The evidence format is verified a second time, by a second implementation,
+  # on a runner that installs no Node.js at all. If this job needed anything
+  # from the build above, it would not be independent.
+  conformance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Verify the frozen vectors with the independent Python verifier
+        run: python conformance/verify.py

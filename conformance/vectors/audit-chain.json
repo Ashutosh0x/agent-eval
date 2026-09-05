@@ -1,0 +1,90 @@
+{
+  "genesisHash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "entryHash": "SHA-256 over the canonical JSON of the entry with `entryHash` removed",
+  "chaining": "entry[i].previousHash === entry[i-1].entryHash; entry[0] uses the genesis hash",
+  "entries": [
+    {
+      "seq": 0,
+      "recordedAt": "2026-01-15T09:00:00.000Z",
+      "action": "run.started",
+      "actor": "you@example.test",
+      "tenantId": "acme",
+      "subject": "run_01",
+      "payload": {
+        "manifestDigest": "sha256:abc"
+      },
+      "previousHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "entryHash": "fe7a95c4830852e0dd0fbf1d9eeb68f7fd8d36d639278daf8b6e933c2abb662c"
+    },
+    {
+      "seq": 1,
+      "recordedAt": "2026-01-15T09:00:01.000Z",
+      "action": "provider.called",
+      "actor": "system",
+      "tenantId": "acme",
+      "subject": "run_01",
+      "payload": {
+        "provider": "ollama",
+        "model": "gemma3:4b"
+      },
+      "previousHash": "fe7a95c4830852e0dd0fbf1d9eeb68f7fd8d36d639278daf8b6e933c2abb662c",
+      "entryHash": "97cd2a71bff2d47d7e337b1b1d75bded2c1c78a8a93c60686b03c113ffdad248"
+    },
+    {
+      "seq": 2,
+      "recordedAt": "2026-01-15T09:00:02.000Z",
+      "action": "approval.requested",
+      "actor": "system",
+      "tenantId": "acme",
+      "subject": "apr_01",
+      "payload": {
+        "reason": "egress to an unlisted host"
+      },
+      "previousHash": "97cd2a71bff2d47d7e337b1b1d75bded2c1c78a8a93c60686b03c113ffdad248",
+      "entryHash": "169bf01daee4fe04b1e6fc6ab6a7294fd000b43edf5759ea9a63bea806719273"
+    },
+    {
+      "seq": 3,
+      "recordedAt": "2026-01-15T09:00:03.000Z",
+      "action": "approval.granted",
+      "actor": "reviewer@example.test",
+      "tenantId": "acme",
+      "subject": "apr_01",
+      "payload": {
+        "rationale": "host is on the customer allowlist"
+      },
+      "previousHash": "169bf01daee4fe04b1e6fc6ab6a7294fd000b43edf5759ea9a63bea806719273",
+      "entryHash": "d428b4587016639602ee1651c105ef8d4342d7bf985254379e25a75dd6732665"
+    },
+    {
+      "seq": 4,
+      "recordedAt": "2026-01-15T09:00:04.000Z",
+      "action": "run.completed",
+      "actor": "system",
+      "tenantId": "acme",
+      "subject": "run_01",
+      "payload": {
+        "status": "succeeded"
+      },
+      "previousHash": "d428b4587016639602ee1651c105ef8d4342d7bf985254379e25a75dd6732665",
+      "entryHash": "b9742acb810e63a3ea0bbf3790bc33c7b0d0b0ddc99cb13e13a529e938f9dbfb"
+    }
+  ],
+  "tamperedEntry": {
+    "entry": {
+      "seq": 4,
+      "recordedAt": "2026-01-15T09:00:04.000Z",
+      "action": "run.completed",
+      "actor": "system",
+      "tenantId": "acme",
+      "subject": "run_01",
+      "payload": {
+        "status": "failed"
+      },
+      "previousHash": "d428b4587016639602ee1651c105ef8d4342d7bf985254379e25a75dd6732665",
+      "entryHash": "b9742acb810e63a3ea0bbf3790bc33c7b0d0b0ddc99cb13e13a529e938f9dbfb"
+    },
+    "expectBroken": true,
+    "note": "status changed from succeeded to failed; entryHash left alone"
+  }
+}

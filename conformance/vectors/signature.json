@@ -1,0 +1,45 @@
+{
+  "algorithm": "Ed25519 over the UTF-8 bytes of the canonical JSON of `payload`",
+  "note": "`signature.signedAt` is deliberately OUTSIDE the signed bytes. Including it would mean re-signing to correct a clock, and the timestamp that carries weight is a timestamp authority's, not the signer's.",
+  "keySource": "RFC 8032 section 7.1 test vector 1 -- a published key pair, not a real one",
+  "privateKeySeed": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+  "publicKeyRaw": "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+  "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEA11qYAYKxCrfVS/7TyWQHOg7hcvPapiMlrwIaaPcHURo=\n-----END PUBLIC KEY-----\n",
+  "signedBytes": "{\"bundleId\":\"bnd_conformance_0001\",\"entryCount\":5,\"generatedAt\":\"2026-01-15T09:00:05.000Z\",\"merkleRoot\":\"24b3c141b89090858ae2f9ad089ed211ccb3572d15f9dbbcd1465ebfd2e4dd89\",\"runId\":\"run_01\",\"tenantId\":\"acme\"}",
+  "envelope": {
+    "payload": {
+      "bundleId": "bnd_conformance_0001",
+      "runId": "run_01",
+      "tenantId": "acme",
+      "merkleRoot": "24b3c141b89090858ae2f9ad089ed211ccb3572d15f9dbbcd1465ebfd2e4dd89",
+      "entryCount": 5,
+      "generatedAt": "2026-01-15T09:00:05.000Z"
+    },
+    "signature": {
+      "algorithm": "ed25519",
+      "keyId": "conformance-rfc8032-tv1",
+      "value": "5j09PtyRCB4ko/nRF1O8jAl24mQQKC7eOwJZuqS6SiBU/gnuu681FymZ5lkkzJ+pvTAP783wLLd1r+ljVSB6BQ==",
+      "signedAt": "2026-08-30T16:21:32.847Z"
+    }
+  },
+  "tampered": {
+    "envelope": {
+      "payload": {
+        "bundleId": "bnd_conformance_0001",
+        "runId": "run_01",
+        "tenantId": "acme",
+        "merkleRoot": "24b3c141b89090858ae2f9ad089ed211ccb3572d15f9dbbcd1465ebfd2e4dd89",
+        "entryCount": 6,
+        "generatedAt": "2026-01-15T09:00:05.000Z"
+      },
+      "signature": {
+        "algorithm": "ed25519",
+        "keyId": "conformance-rfc8032-tv1",
+        "value": "5j09PtyRCB4ko/nRF1O8jAl24mQQKC7eOwJZuqS6SiBU/gnuu681FymZ5lkkzJ+pvTAP783wLLd1r+ljVSB6BQ==",
+        "signedAt": "2026-08-30T16:21:32.847Z"
+      }
+    },
+    "expectValid": false,
+    "note": "entryCount changed from 5 to 6; the signature is untouched"
+  }
+}

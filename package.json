@@ -8,7 +8,10 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,md,json,yml,yaml}\"",
-    "dgx:check": "bash scripts/check-dgx-spark.sh"
+    "dgx:check": "bash scripts/check-dgx-spark.sh",
+    "conformance:generate": "tsx scripts/generate-conformance-vectors.ts",
+    "conformance:verify": "python conformance/verify.py",
+    "mrd": "tsx scripts/mrd-table.ts"
   },
   "devDependencies": {
     "eslint": "^8.57.0",

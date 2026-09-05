@@ -20,3 +20,6 @@ spec.tmp.json
 
 # Downloaded toolchain (opa binary, ~96MB). Fetched by scripts, never committed.
 .tools/
+
+# opa build drops a dot-file manifest; the script copies it to manifest.json.
+packages/server/policy-bundle/.manifest
