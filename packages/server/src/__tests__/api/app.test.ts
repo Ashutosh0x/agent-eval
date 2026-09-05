@@ -15,10 +15,14 @@ import { createInMemoryStores, type InMemoryAuditStore, type Stores } from '../.
 
 const DIGEST = 'sha256:' + 'a'.repeat(64);
 
+// Carries `splits:held-out` because validRun() schedules against the held-out
+// split. Before the split gate existed this token could do that WITHOUT the
+// scope, which is exactly the contamination hole the gate closes — see the
+// "held-out split access" block below, which pins the refusal.
 const ADMIN =
-  'Bearer t1:reviewer@example.test:runs:read,runs:write,evidence:read,evidence:generate,approvals:decide,audit:read';
+  'Bearer t1:reviewer@example.test:runs:read,runs:write,evidence:read,evidence:generate,approvals:decide,audit:read,splits:held-out';
 const OTHER_TENANT =
-  'Bearer t2:someone@other.test:runs:read,runs:write,evidence:read,evidence:generate,audit:read';
+  'Bearer t2:someone@other.test:runs:read,runs:write,evidence:read,evidence:generate,audit:read,splits:held-out';
 const READ_ONLY = 'Bearer t1:viewer@example.test:runs:read';
 
 function validRun(over: Record<string, unknown> = {}) {
@@ -485,5 +489,127 @@ describe('audit and proofs', () => {
     // An API that can delete an entry is not an append-only log, whatever the
     // storage layer does underneath.
     expect(res.statusCode).toBe(404);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Held-out split access control.
+//
+// The contamination gate, exercised through the real route rather than against
+// the pure function. Before it existed, any token with `runs:write` could
+// schedule a run against a held-out split — including the ADMIN fixture above,
+// which is why that constant had to gain the scope for the rest of this file
+// to keep passing.
+// ---------------------------------------------------------------------------
+describe('held-out split access', () => {
+  let app: FastifyInstance;
+  let stores: Stores & { audit: InMemoryAuditStore };
+
+  const WITHOUT_SCOPE = 'Bearer t1:analyst@example.test:runs:read,runs:write,audit:read';
+
+  beforeEach(async () => {
+    stores = createInMemoryStores();
+    app = await buildApp({
+      stores,
+      signer: new Signer(new InMemoryKeySource()),
+      docs: false,
+    });
+  });
+
+  it('refuses a held-out run from a caller without the scope', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/runs',
+      headers: { authorization: WITHOUT_SCOPE },
+      payload: validRun({ split: 'held-out' }),
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().requiredScope).toBe('splits:held-out');
+  });
+
+  it('creates no run record when it refuses', async () => {
+    // The refusal must leave no trace of having been scheduled, or a rejected
+    // held-out attempt still shows up as a run somebody can point at.
+    await app.inject({
+      method: 'POST',
+      url: '/v1/runs',
+      headers: { authorization: WITHOUT_SCOPE },
+      payload: validRun({ split: 'held-out' }),
+    });
+    const list = await app.inject({
+      method: 'GET',
+      url: '/v1/runs',
+      headers: { authorization: WITHOUT_SCOPE },
+    });
+    expect(list.json().items).toHaveLength(0);
+  });
+
+  it('audits the refusal, naming the actor and the scopes they held', async () => {
+    // One 403 is uninteresting; the same actor generating a hundred is the
+    // signal, and that is only visible if each is recorded.
+    await app.inject({
+      method: 'POST',
+      url: '/v1/runs',
+      headers: { authorization: WITHOUT_SCOPE },
+      payload: validRun({ split: 'held-out' }),
+    });
+    const entries = await stores.audit.query(
+      { tenantId: 't1', actor: 'analyst@example.test', scopes: [] },
+      { limit: 50 },
+    );
+    const denial = entries.items.find((e) => e.action === 'run.split_access_denied');
+    expect(denial).toBeDefined();
+    expect(denial?.actor).toBe('analyst@example.test');
+    const payload = denial?.payload as { heldScopes: string[]; requiredScope: string };
+    expect(payload.requiredScope).toBe('splits:held-out');
+    expect(payload.heldScopes).toContain('runs:write');
+  });
+
+  it('allows the same run once the caller holds the scope', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/runs',
+      headers: { authorization: `${WITHOUT_SCOPE},splits:held-out` },
+      payload: validRun({ split: 'held-out' }),
+    });
+    expect(res.statusCode).toBe(202);
+  });
+
+  it('does not gate train or dev', async () => {
+    for (const split of ['train', 'dev']) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/runs',
+        headers: { authorization: WITHOUT_SCOPE },
+        payload: validRun({ split }),
+      });
+      expect(`${split}:${res.statusCode}`).toBe(`${split}:202`);
+    }
+  });
+
+  it('is not evaded by casing or separator tricks', async () => {
+    // The gate normalizes before deciding, so "HELD-OUT", "Held_Out" and
+    // " heldout " are all the held-out split and all refused.
+    for (const split of ['HELD-OUT', 'Held_Out', 'heldout', 'HELD_OUT', ' held-out ']) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/runs',
+        headers: { authorization: WITHOUT_SCOPE },
+        payload: validRun({ split }),
+      });
+      expect(`${split}:${res.statusCode}`).toBe(`${split}:403`);
+    }
+  });
+
+  it('the refusal body does not disclose held-out material', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/runs',
+      headers: { authorization: WITHOUT_SCOPE },
+      payload: validRun({ split: 'held-out' }),
+    });
+    const body = JSON.stringify(res.json());
+    expect(body).not.toContain('groundTruth');
+    expect(body).not.toContain('prompt');
   });
 });

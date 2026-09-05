@@ -35,6 +35,14 @@ import {
   startRunSchema,
 } from '../schemas/index.js';
 import type { InMemoryAuditStore, Stores, TenantContext } from '../store/index.js';
+import {
+  checkSplitAccess,
+  normalizeSplit,
+  splitDenialAudit,
+  type TaskStore,
+} from '../tasks/registry.js';
+import type { TrialStore } from '../trajectories/store.js';
+import type { BlobStore } from '../trajectories/blob-store.js';
 import { registerDocs } from './docs.js';
 import type { RunWorker } from '../worker/worker.js';
 import { ProviderCredentialStore } from '../auth/provider-credentials.js';
@@ -68,6 +76,12 @@ export interface AppOptions {
   executionUnavailable?: string | null;
   /** Where provider credentials live. Defaults to an env-keyed store. */
   credentials?: ProviderCredentialStore;
+  /** Task and split registry. Absent disables the task routes. */
+  tasks?: TaskStore;
+  /** Trial and trajectory storage. Absent disables the trajectory routes. */
+  trials?: TrialStore;
+  /** Screenshot blob storage. Absent disables screenshot upload and serving. */
+  blobs?: BlobStore;
 }
 
 /**
@@ -355,6 +369,41 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         'retentionRules',
       );
       return reply.status(422).type('application/problem+json').send(p);
+    }
+
+    // ---------------------------------------------------------------- splits
+    //
+    // Contamination control, enforced before the run record exists so a refused
+    // run leaves no trace of having been scheduled. A HELD_OUT split needs the
+    // `splits:held-out` scope and nothing else grants it — see tasks/registry.
+    //
+    // The refusal is audited as well as returned: one 403 is uninteresting,
+    // the same actor generating a hundred is the signal.
+    const requestedSplit = normalizeSplit(input.split);
+    if (requestedSplit) {
+      const access = checkSplitAccess(req.ctx, requestedSplit);
+      if (access.outcome === 'denied') {
+        await stores.audit.append(req.ctx, {
+          action: 'run.split_access_denied',
+          subject: input.taskSetId,
+          payload: splitDenialAudit(req.ctx, {
+            id: input.taskSetId,
+            version: input.taskSetVersion,
+            split: requestedSplit,
+            contentHash: hashSplit([input.taskSetId, input.taskSetVersion, input.split]),
+          }),
+        });
+        return reply
+          .status(403)
+          .type('application/problem+json')
+          .send({
+            type: 'https://agent-eval.dev/problems/split-access-denied',
+            title: 'Held-out split requires an explicit scope',
+            status: 403,
+            detail: access.reason,
+            requiredScope: access.requiredScope,
+          });
+      }
     }
 
     const run = await stores.runs.create(req.ctx, {

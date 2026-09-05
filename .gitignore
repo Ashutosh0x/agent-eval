@@ -17,3 +17,6 @@ spec.tmp.json
 
 # Vercel CLI link state: contains project and org identifiers.
 .vercel
+
+# Downloaded toolchain (opa binary, ~96MB). Fetched by scripts, never committed.
+.tools/

@@ -1,0 +1,1 @@
+{"revision":"","roots":[""],"wasm":[{"entrypoint":"agenteval/approval/require_approval","module":"/policy.wasm"},{"entrypoint":"agenteval/egress/allow_egress","module":"/policy.wasm"},{"entrypoint":"agenteval/budget/deny_budget","module":"/policy.wasm"},{"entrypoint":"agenteval/authz/allow","module":"/policy.wasm"}],"rego_version":0}
