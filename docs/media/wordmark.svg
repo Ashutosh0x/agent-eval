@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="96" viewBox="0 0 560 96" role="img"
+     aria-label="Agent Eval — audit-grade evaluation control plane">
+  <!--
+    The README wordmark.
+
+    WHY THIS IS AN IMAGE AND NOT A MARKDOWN HEADING. GitHub strips <style>,
+    font-family and class attributes from rendered README markdown, so a
+    heading cannot be set in the product's typeface. An inline SVG is the only
+    element whose text GitHub renders with the font the document asks for.
+
+    The typeface is IBM Plex Sans, matching apps/web (tailwind.config.js
+    fontFamily.sans and index.css). Plex ships with most Linux distributions
+    and is bundled with several IBM products, but it is NOT a system font on
+    macOS or Windows, so the stack falls through to the same ui-sans-serif /
+    system-ui chain the app itself uses. That means a visitor without Plex sees
+    their system sans — the same degradation the running app has, rather than a
+    different one.
+
+    Colours are the app's own CSS custom properties: text (#16202b) for
+    light, text-muted (#5b6875) for the subtitle, sealed (#1F6F4A) for the
+    rule. Written without their leading double hyphens because a double hyphen
+    terminates an XML comment early and makes the file unparseable.
+    prefers-color-scheme is honoured so the mark does not glow white on
+    GitHub's dark theme; @media inside an SVG is respected by GitHub's image
+    renderer for inline <text>, and the light values are the defaults so a
+    renderer that ignores the query still produces a legible mark rather than
+    an invisible one.
+  -->
+  <style>
+    .wordmark {
+      font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+      font-weight: 600;
+      font-size: 42px;
+      letter-spacing: -0.5px;
+      fill: #16202b;
+    }
+    .tagline {
+      font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 15px;
+      letter-spacing: 0.2px;
+      fill: #5b6875;
+    }
+    .rule { stroke: #1F6F4A; stroke-width: 2; }
+
+    @media (prefers-color-scheme: dark) {
+      .wordmark { fill: #f7f8fa; }
+      .tagline  { fill: #97a3b0; }
+      .rule     { stroke: #278D5E; }
+    }
+  </style>
+
+  <text class="wordmark" x="280" y="46" text-anchor="middle">Agent Eval</text>
+  <line class="rule" x1="240" y1="62" x2="320" y2="62" />
+  <text class="tagline" x="280" y="84" text-anchor="middle">Audit-grade evaluation for agentic AI</text>
+</svg>

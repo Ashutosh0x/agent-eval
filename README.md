@@ -1,18 +1,25 @@
-# Agent Eval
+<div align="center">
+
+<!-- Set in IBM Plex Sans, the same face as the dashboard. An SVG rather than
+     a markdown heading because GitHub strips font-family from rendered
+     markdown, so a heading cannot carry the product's typeface. -->
+<img src="docs/media/wordmark.svg" alt="Agent Eval" width="480">
 
 An audit-grade, self-hosted evaluation control plane for agentic AI in
 regulated environments.
-
-It does not define a new environment format. It runs upstream environments
-inside an isolation boundary and emits **tamper-evident, retention-compliant
-evidence bundles** that a reviewer can verify without trusting the server that
-produced them.
 
 <a href="https://trendshift.io/repositories/50668" target="_blank">
   <img src="https://trendshift.io/api/badge/repositories/50668"
        alt="Ashutosh0x/agent-eval | Trendshift"
        width="250" height="55" />
 </a>
+
+</div>
+
+It does not define a new environment format. It runs upstream environments
+inside an isolation boundary and emits **tamper-evident, retention-compliant
+evidence bundles** that a reviewer can verify without trusting the server that
+produced them.
 
 <p>
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white">
